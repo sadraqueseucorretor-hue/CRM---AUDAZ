@@ -628,6 +628,30 @@
                                 </div>
                             </div>
 
+                            <!-- CONFIGURAÇÃO DE LISTAS (Construtoras / Empreendimentos) -->
+                            <div id="prof-listas-panel" class="glass p-8 rounded-2xl border border-slate-700/50 hidden mt-6">
+                                <h4 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-700/50 pb-3"><i class="fa-solid fa-list-check text-purple-400 mr-2"></i> Listas de Seleção</h4>
+                                <p class="text-sm text-slate-400 mb-6">Cadastre as opções que os corretores poderão escolher no lead. Só você (Diretor) edita estas listas.</p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div>
+                                        <h5 class="text-xs font-bold text-purple-300 uppercase tracking-widest mb-3"><i class="fa-solid fa-building mr-1"></i> Construtoras</h5>
+                                        <div class="flex gap-2 mb-3">
+                                            <input type="text" id="nova-construtora" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Ex: MRV" onkeydown="if(event.key==='Enter'){addItemLista('construtoras');}">
+                                            <button onclick="addItemLista('construtoras')" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm"><i class="fa-solid fa-plus"></i></button>
+                                        </div>
+                                        <div id="lista-construtoras" class="space-y-2"></div>
+                                    </div>
+                                    <div>
+                                        <h5 class="text-xs font-bold text-blue-300 uppercase tracking-widest mb-3"><i class="fa-solid fa-city mr-1"></i> Empreendimentos</h5>
+                                        <div class="flex gap-2 mb-3">
+                                            <input type="text" id="novo-empreendimento" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Ex: Residencial Bosque" onkeydown="if(event.key==='Enter'){addItemLista('empreendimentos');}">
+                                            <button onclick="addItemLista('empreendimentos')" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm"><i class="fa-solid fa-plus"></i></button>
+                                        </div>
+                                        <div id="lista-empreendimentos" class="space-y-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -1182,12 +1206,21 @@
                 <div class="flex-1 overflow-y-auto p-8 border-r border-slate-700 custom-scrollbar bg-slate-900/30 relative">
                     
                     <div id="tab-dados" class="tab-content active">
+                        <!-- OBSERVAÇÃO INICIAL / CAMPANHA (destaque) -->
+                        <div id="ld-initial-obs-box" class="hidden mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+                            <i class="fa-solid fa-bullhorn text-amber-400 text-lg mt-0.5"></i>
+                            <div>
+                                <p class="text-[11px] font-bold text-amber-300 uppercase tracking-widest mb-1">Observação inicial / Campanha</p>
+                                <p id="ld-initial-obs-text" class="text-sm text-slate-200"></p>
+                            </div>
+                        </div>
                         <div class="grid grid-cols-2 gap-8">
                             <div class="space-y-8">
                                 <!-- DADOS PRINCIPAIS -->
                                 <div class="glass p-6 rounded-xl border border-slate-700/50">
                                     <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center"><i class="fa-regular fa-address-card mr-2 text-primary text-lg"></i>Dados Principais</h4>
                                     <div class="space-y-5 text-sm">
+                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Nome do Cliente</label><input type="text" id="ld-clientname" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead font-bold"></div>
                                         <div><label class="text-slate-500 text-xs font-semibold uppercase">CPF</label><input type="text" id="ld-cpf" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead cpf-mask" maxlength="14" placeholder="000.000.000-00"></div>
                                         <div><label class="text-slate-500 text-xs font-semibold uppercase">Telefone / WhatsApp</label><input type="text" id="ld-phone" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead phone-mask" maxlength="15"></div>
                                         <div><label class="text-slate-500 text-xs font-semibold uppercase">E-mail</label><input type="email" id="ld-email" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"></div>
@@ -1199,8 +1232,8 @@
                                 <div class="glass p-6 rounded-xl border border-slate-700/50">
                                     <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center"><i class="fa-solid fa-building mr-2 text-purple-400 text-lg"></i>Interesse</h4>
                                     <div class="space-y-5 text-sm">
-                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Construtora</label><input type="text" id="ld-construtora" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead" placeholder="Ex: MRV, Tenda..."></div>
-                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Empreendimento Alvo</label><input type="text" id="ld-project" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"></div>
+                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Construtora</label><select id="ld-construtora" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"><option value="">Selecione...</option></select></div>
+                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Empreendimento Alvo</label><select id="ld-project" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"><option value="">Selecione...</option></select></div>
                                         <div><label class="text-slate-500 text-xs font-semibold uppercase">Origem</label><select id="ld-origin" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"><option value="">Selecione...</option><option value="Instagram">Instagram</option><option value="Facebook">Facebook</option><option value="Google">Google Ads</option><option value="Indicação">Indicação</option><option value="Site">Site</option><option value="WhatsApp">WhatsApp</option></select></div>
                                     </div>
                                 </div>
@@ -1516,7 +1549,7 @@
         const DB_KEYS = {
             USERS: 'audaz_users', LEADS: 'audaz_leads', SESSION: 'audaz_session',
             LOGGED_USER: 'audaz_logged_user', LAST_PAGE: 'audaz_last_page',
-            NOTIFICATIONS: 'audaz_notifications', PIPELINES: 'audaz_pipelines'
+            NOTIFICATIONS: 'audaz_notifications', PIPELINES: 'audaz_pipelines', LISTAS: 'audaz_listas'
         };
 
         const PIPELINES_DEFAULT = {
@@ -1552,6 +1585,9 @@
         };
 
         let PIPELINES = JSON.parse(JSON.stringify(PIPELINES_DEFAULT));
+
+        // Listas gerenciáveis pelo Diretor (Construtoras e Empreendimentos)
+        let LISTAS = { construtoras: [], empreendimentos: [] };
 
         const DOC_CHECKLIST_ITEMS = [
             { id: 'rg', label: 'RG / CNH' }, { id: 'cpf', label: 'CPF' }, { id: 'comp_residencia', label: 'Comp. Residência' },
@@ -1786,6 +1822,16 @@
                     PIPELINES.financeiro = parsed.financeiro || PIPELINES_DEFAULT.financeiro;
                 }
             } catch(e) { /* usa default */ }
+
+            // Carrega listas (construtoras / empreendimentos)
+            try {
+                const savedListas = await dbGet(DB_KEYS.LISTAS);
+                if(savedListas) {
+                    const parsed = JSON.parse(savedListas);
+                    LISTAS.construtoras = Array.isArray(parsed.construtoras) ? parsed.construtoras : [];
+                    LISTAS.empreendimentos = Array.isArray(parsed.empreendimentos) ? parsed.empreendimentos : [];
+                }
+            } catch(e) { /* usa vazio */ }
         }
 
         async function savePipelinesDB() {
@@ -1794,6 +1840,10 @@
                 analise: PIPELINES.analise,
                 financeiro: PIPELINES.financeiro
             }));
+        }
+
+        async function saveListasDB() {
+            await dbSet(DB_KEYS.LISTAS, JSON.stringify(LISTAS));
         }
 
         async function saveUsersDB() {
@@ -2086,15 +2136,18 @@
             const backupPanel = document.getElementById('prof-backup-panel');
             const logoPanel = document.getElementById('prof-logo-panel');
             const pipelinesPanel = document.getElementById('prof-pipelines-panel');
+            const listasPanel = document.getElementById('prof-listas-panel');
             if(currentUser.role === 'Diretor') {
                 backupPanel.classList.remove('hidden');
                 logoPanel.classList.remove('hidden');
                 if(pipelinesPanel) { pipelinesPanel.classList.remove('hidden'); renderPipelineEditor('leads'); }
+                if(listasPanel) { listasPanel.classList.remove('hidden'); renderListasEditor(); }
                 loadSysLogo();
             } else {
                 backupPanel.classList.add('hidden');
                 logoPanel.classList.add('hidden');
                 if(pipelinesPanel) pipelinesPanel.classList.add('hidden');
+                if(listasPanel) listasPanel.classList.add('hidden');
             }
 
             // Mostrar "Leads a Distribuir" para Diretor, Gerente e Administrativo
@@ -2281,6 +2334,23 @@ window.toggleSidebar = function() {
                 if(select) { select.value = 'Não Atribuído'; select.disabled = false; }
                 window._pendingDistribuir = true;
             }, 100);
+        }
+
+        // Preenche os dropdowns de Construtora e Empreendimento a partir das listas do Diretor
+        function populateListaDropdowns(lead) {
+            const fill = (selectId, items, currentValue) => {
+                const sel = document.getElementById(selectId);
+                if(!sel) return;
+                let opts = '<option value="">Selecione...</option>';
+                const lista = [...items];
+                // Garante que o valor atual do lead apareça, mesmo se não estiver mais na lista
+                if(currentValue && !lista.includes(currentValue)) lista.push(currentValue);
+                opts += lista.map(it => `<option value="${it}">${it}</option>`).join('');
+                sel.innerHTML = opts;
+                if(currentValue) sel.value = currentValue;
+            };
+            fill('ld-construtora', LISTAS.construtoras, lead?.construtora);
+            fill('ld-project', LISTAS.empreendimentos, lead?.project);
         }
 
         function populateBrokerDropdowns() {
@@ -2879,14 +2949,24 @@ window.toggleSidebar = function() {
             
             const tempEl = document.getElementById('ld-temp-select');
             if(tempEl) lead.temp = tempEl.value;
-            
-            // Mudança de pipeline/etapa SÓ via botão "Mover Cliente" ou changeStageFromModal()
+
+            // Nome do cliente (editável) — atualiza o nome e o cabeçalho
+            const nameInput = document.getElementById('ld-clientname');
+            if(nameInput && nameInput.value.trim() && nameInput.value !== lead.name) {
+                lead.name = nameInput.value.trim();
+                const tColors = { 'Hot':'bg-orange-500 text-white','Morno':'bg-yellow-500 text-white','Frio':'bg-blue-500 text-white','Novo':'bg-emerald-500 text-white' };
+                const tc = tColors[lead.temp] || 'bg-slate-600 text-white';
+                const nameH = document.getElementById('ld-name');
+                if(nameH) nameH.innerHTML = `${lead.numId ? '<span class="text-blue-400 text-lg align-middle mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${lead.name} <span class="text-[11px] px-2.5 py-1 rounded font-bold uppercase tracking-wider ml-2 align-middle ${tc}">${lead.temp || 'Novo'}</span>`;
+                const av = document.getElementById('ld-avatar');
+                if(av) av.innerText = lead.name.substring(0,2).toUpperCase();
+            }
 
             // Registrar última alteração
             lead.updatedAt = new Date().toISOString();
             lead.updatedBy = currentUser.name;
 
-            saveLeadsDB(); 
+            saveLeadsDB();
             triggerAutoSaveUI('save-ind-lead');
         }
 
@@ -3149,7 +3229,22 @@ window.toggleSidebar = function() {
             const sBadge = document.getElementById('ld-stage-badge');
             if(pBadge) { pBadge.textContent = pipeNames[lead.pipeline] || lead.pipeline; pBadge.className = 'text-sm font-bold rounded px-3 py-1 border ' + (pipeColors[lead.pipeline] || 'bg-slate-800 text-white border-slate-600'); }
             if(sBadge) sBadge.textContent = stageName;
-            
+
+            // Preenche as listas (Construtora / Empreendimento) antes de setar os valores
+            populateListaDropdowns(lead);
+
+            // Nome do cliente (editável)
+            const nameInput = document.getElementById('ld-clientname');
+            if(nameInput) nameInput.value = lead.name || '';
+
+            // Observação inicial / campanha (destaque)
+            const obsBox = document.getElementById('ld-initial-obs-box');
+            const obsText = document.getElementById('ld-initial-obs-text');
+            if(obsBox && obsText) {
+                if(lead.opObs && lead.opObs.trim()) { obsText.textContent = lead.opObs; obsBox.classList.remove('hidden'); }
+                else obsBox.classList.add('hidden');
+            }
+
             ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin'].forEach(f => {
                 const el = document.getElementById(`ld-${f}`);
                 if(el) el.value = lead[f] || '';
@@ -3680,6 +3775,55 @@ window.toggleSidebar = function() {
             renderPipelineEditor(_currentPipelineTab);
             showToast('Pipeline restaurado para o padrão!', 'info');
             if(['leads','analise','financeiro'].includes(currentView)) renderKanban(currentPipeline);
+        }
+
+        // ====================================================================
+        // LISTAS DE SELEÇÃO (Construtoras / Empreendimentos) — gerenciadas pelo Diretor
+        // ====================================================================
+        function renderListasEditor() {
+            const render = (tipo, containerId, cor) => {
+                const cont = document.getElementById(containerId);
+                if(!cont) return;
+                const items = LISTAS[tipo] || [];
+                if(items.length === 0) {
+                    cont.innerHTML = '<p class="text-xs text-slate-500 italic py-2">Nenhum item cadastrado ainda.</p>';
+                    return;
+                }
+                cont.innerHTML = items.map((it, i) => `
+                    <div class="flex items-center justify-between bg-slate-800/60 border border-slate-700/50 rounded-lg px-3 py-2">
+                        <span class="text-sm text-white">${it}</span>
+                        <button onclick="removeItemLista('${tipo}', ${i})" class="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1.5 rounded transition-colors"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>`).join('');
+            };
+            render('construtoras', 'lista-construtoras');
+            render('empreendimentos', 'lista-empreendimentos');
+        }
+
+        window.addItemLista = async function(tipo) {
+            const inputId = tipo === 'construtoras' ? 'nova-construtora' : 'novo-empreendimento';
+            const input = document.getElementById(inputId);
+            const val = input.value.trim();
+            if(!val) return;
+            if(!LISTAS[tipo]) LISTAS[tipo] = [];
+            if(LISTAS[tipo].some(x => x.toLowerCase() === val.toLowerCase())) {
+                showToast('Esse item já existe na lista.', 'warning'); return;
+            }
+            LISTAS[tipo].push(val);
+            LISTAS[tipo].sort((a,b) => a.localeCompare(b));
+            await saveListasDB();
+            input.value = '';
+            renderListasEditor();
+            triggerAutoSaveUI();
+            showToast('Item adicionado!', 'success');
+        }
+
+        window.removeItemLista = async function(tipo, index) {
+            const item = LISTAS[tipo][index];
+            if(!confirm(`Remover "${item}" da lista?`)) return;
+            LISTAS[tipo].splice(index, 1);
+            await saveListasDB();
+            renderListasEditor();
+            showToast('Item removido.', 'info');
         }
 
         window.exportBackupJSON = function() {
