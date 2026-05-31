@@ -1573,6 +1573,57 @@
             return max + 1;
         }
         function formatNumId(n) { return '#' + String(n || 0).padStart(4, '0'); }
+
+        // ====================================================================
+        // INTEGRAÇÃO COM GOOGLE SHEETS (planilha de análises)
+        // ====================================================================
+        const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw6grA_LjvIisXi3PYKCl3O0r5qLYDO54IMcNdVXNeqTNwgbtpy0_oDcTzbIglcm8LGiA/exec';
+        const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+        function leadSheetId(lead) {
+            return lead.numId ? formatNumId(lead.numId) : lead.id;
+        }
+
+        // Envia o lead para a planilha quando entra em Análise (cria a linha)
+        async function enviarParaPlanilhaAnalise(lead) {
+            try {
+                const broker = DB.users.find(u => u.name === lead.broker);
+                const agora = new Date();
+                await fetch(SHEETS_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'enviarAnalise',
+                        id: leadSheetId(lead),
+                        data: agora.toLocaleDateString('pt-BR'),
+                        mes: MESES_PT[agora.getMonth()] + '/' + agora.getFullYear(),
+                        corretor: lead.broker || '',
+                        equipe: broker?.team || '',
+                        cliente: lead.name || '',
+                        construtora: lead.construtora || ''
+                    })
+                });
+            } catch(e) { console.error('Erro ao enviar para planilha:', e); }
+        }
+
+        // Atualiza o status na planilha (Aprovado / Reprovado / Pendente / etc.)
+        const STATUS_ANALISE_MAP = {
+            'aprovado': 'Aprovado', 'reprovado': 'Reprovado', 'com-pendencia': 'Pendente',
+            'em-analise': 'Em Análise', 'analise-pendente': 'Análise Pendente', 'bacen': 'BACEN'
+        };
+        async function sincronizarStatusAnalise(lead) {
+            if(!lead || lead.pipeline !== 'analise') return;
+            const status = STATUS_ANALISE_MAP[lead.stageId]
+                || PIPELINES.analise.find(s => s.id === lead.stageId)?.title
+                || lead.stageId;
+            try {
+                await fetch(SHEETS_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'atualizarStatus', id: leadSheetId(lead), status })
+                });
+            } catch(e) { console.error('Erro ao atualizar status na planilha:', e); }
+        }
         function getTime() { return new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); }
         function getDateStr() { return new Date().toLocaleDateString('pt-BR'); }
         function formatCurrency(v) { return 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
@@ -2784,6 +2835,7 @@ window.toggleSidebar = function() {
             lead.timeline.unshift(`[${t}] ${currentUser.name} moveu para: ${stageName}`);
             updateColumnOrder(newColumnEl);
             saveLeadsDB();
+            sincronizarStatusAnalise(lead); // → atualiza status na planilha (se estiver em Análise)
             renderKanban(currentPipeline);
         }
 
@@ -4317,6 +4369,7 @@ window.toggleSidebar = function() {
             } else if(targetPipeline === 'analise') {
                 showToast(`${lead.name} enviado para Análise de Crédito.`, 'info');
                 addNotification(`Lead "${lead.name}" enviado para Análise`, 'info');
+                enviarParaPlanilhaAnalise(lead); // → registra na planilha do Google
             } else {
                 showToast(`${lead.name} retornado para o Pipeline de Leads.`, 'info');
             }
@@ -4868,10 +4921,11 @@ window.toggleSidebar = function() {
             lead.updatedAt = new Date().toISOString();
             lead.updatedBy = currentUser.name;
             lead.timeline.unshift(`[${t}] ${currentUser.name} alterou etapa para: ${stageName}`);
-            
+
             saveLeadsDB();
+            sincronizarStatusAnalise(lead); // → atualiza status na planilha (se estiver em Análise)
             renderTimeline(lead);
-            
+
             // Sincroniza o select oculto também
             const stageEditableOld = document.getElementById('ld-stage-editable');
             if(stageEditableOld) stageEditableOld.value = newStageId;
@@ -4903,10 +4957,11 @@ window.toggleSidebar = function() {
             lead.updatedAt = new Date().toISOString();
             lead.updatedBy = currentUser.name;
             lead.timeline.unshift(`[${t}] ${currentUser.name} alterou etapa para: ${stageName}`);
-            
+
             saveLeadsDB();
+            sincronizarStatusAnalise(lead); // → atualiza status na planilha (se estiver em Análise)
             renderTimeline(lead);
-            
+
             // Atualiza o badge no header
             const sBadge = document.getElementById('ld-stage-badge');
             if(sBadge) sBadge.textContent = stageName;
