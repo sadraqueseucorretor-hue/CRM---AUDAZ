@@ -1566,6 +1566,12 @@
         let charts = { funnel: null, origin: null };
 
         function generateId() { return Math.random().toString(36).substr(2, 9); }
+        function nextNumId() {
+            let max = 0;
+            DB.leads.forEach(l => { if(typeof l.numId === 'number' && l.numId > max) max = l.numId; });
+            return max + 1;
+        }
+        function formatNumId(n) { return '#' + String(n || 0).padStart(4, '0'); }
         function getTime() { return new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); }
         function getDateStr() { return new Date().toLocaleDateString('pt-BR'); }
         function formatCurrency(v) { return 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
@@ -1674,6 +1680,16 @@
                 }
             });
             if(leadsMigrated) await persistLeads();
+
+            // Migração: atribui número de ID sequencial aos leads que ainda não têm
+            let maxNumId = 0;
+            DB.leads.forEach(l => { if(typeof l.numId === 'number' && l.numId > maxNumId) maxNumId = l.numId; });
+            let numIdMigrated = false;
+            // Ordena por data de criação para numerar na ordem certa
+            const semNumId = DB.leads.filter(l => typeof l.numId !== 'number')
+                .sort((a,b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+            semNumId.forEach(l => { maxNumId++; l.numId = maxNumId; numIdMigrated = true; });
+            if(numIdMigrated) await persistLeads();
 
             // Migração: normaliza nomes de corretores nos leads para bater com usuários cadastrados
             let brokerMigrated = false;
@@ -2379,13 +2395,15 @@ window.toggleSidebar = function() {
                 const seen = new Set();
                 const allUnique = allVisible.filter(l => { if(seen.has(l.id)) return false; seen.add(l.id); return true; });
 
-                const found = allUnique.filter(l => 
+                const qNum = q.replace(/[#\s]/g, ''); // permite buscar "#0012", "0012" ou "12"
+                const found = allUnique.filter(l =>
                     l.name.toLowerCase().includes(q) ||
                     (l.phone || '').toLowerCase().includes(q) ||
                     (l.cpf || '').toLowerCase().includes(q) ||
                     (l.email || '').toLowerCase().includes(q) ||
                     (l.project || '').toLowerCase().includes(q) ||
-                    (l.broker || '').toLowerCase().includes(q)
+                    (l.broker || '').toLowerCase().includes(q) ||
+                    (l.numId && (String(l.numId) === qNum || formatNumId(l.numId).toLowerCase().includes(q) || String(l.numId).padStart(4,'0').includes(qNum)))
                 ).slice(0, 10);
                 
                 if(found.length === 0) {
@@ -2400,7 +2418,7 @@ window.toggleSidebar = function() {
                         return `<button onclick="openLeadDetails('${l.id}'); document.getElementById('search-results').classList.add('hidden'); document.getElementById('global-search').value='';" class="w-full text-left p-4 hover:bg-slate-700/40 border-b border-slate-700/50 transition-colors flex items-center gap-4 ${isCanceled ? 'opacity-70' : ''}">
                             <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold text-white ${isCanceled ? 'grayscale' : ''}">${l.name.charAt(0).toUpperCase()}</div>
                             <div class="flex-1 overflow-hidden">
-                                <p class="text-sm font-bold text-white truncate">${l.name}${cancelBadge}</p>
+                                <p class="text-sm font-bold text-white truncate">${l.numId ? '<span class="text-blue-400 mr-1">'+formatNumId(l.numId)+'</span>' : ''}${l.name}${cancelBadge}</p>
                                 <p class="text-xs text-slate-400 truncate">${l.phone || ''} • ${pipelineName} ${stageName ? '/ ' + stageName : ''} ${l.broker ? '• ' + l.broker : ''}</p>
                             </div>
                             <i class="fa-solid fa-arrow-right text-slate-500"></i>
@@ -2721,7 +2739,7 @@ window.toggleSidebar = function() {
                     <div class="flex justify-between items-start mb-4">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-sm font-bold text-white shadow-inner pointer-events-none">${initial}</div>
-                            <div class="pointer-events-none"><h4 class="font-bold text-[15px] text-white leading-tight mb-1">${lead.name}</h4><span class="text-xs text-slate-400 font-medium">${lead.origin || 'Desconhecido'}</span></div>
+                            <div class="pointer-events-none"><h4 class="font-bold text-[15px] text-white leading-tight mb-1">${lead.numId ? '<span class="text-blue-400 text-xs mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${lead.name}</h4><span class="text-xs text-slate-400 font-medium">${lead.origin || 'Desconhecido'}</span></div>
                         </div>
                         <span class="text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider ${tempColor} pointer-events-none">${lead.temp || 'Novo'}</span>
                     </div>
@@ -2940,6 +2958,7 @@ window.toggleSidebar = function() {
                 window._pendingDistribuir = false;
                 const newLead = {
                     id: generateId(),
+                    numId: nextNumId(),
                     name: document.getElementById('nl-name').value,
                     phone: phone,
                     email: document.getElementById('nl-email').value,
@@ -3063,7 +3082,7 @@ window.toggleSidebar = function() {
                 'Novo': 'bg-emerald-500 text-white'
             };
             const tempColor = tempColors[lead.temp] || 'bg-slate-600 text-white';
-            document.getElementById('ld-name').innerHTML = `${lead.name} <span class="text-[11px] px-2.5 py-1 rounded font-bold uppercase tracking-wider ml-2 align-middle ${tempColor}">${lead.temp || 'Novo'}</span>`;
+            document.getElementById('ld-name').innerHTML = `${lead.numId ? '<span class="text-blue-400 text-lg align-middle mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${lead.name} <span class="text-[11px] px-2.5 py-1 rounded font-bold uppercase tracking-wider ml-2 align-middle ${tempColor}">${lead.temp || 'Novo'}</span>`;
             document.getElementById('ld-avatar').innerText = lead.name.substring(0,2).toUpperCase();
             
             document.getElementById('ld-pipeline-select').value = lead.pipeline; 
@@ -4783,6 +4802,7 @@ window.toggleSidebar = function() {
 
                 const lead = {
                     id: generateId(),
+                    numId: nextNumId(),
                     name: tpl.name, phone: tpl.phone,
                     email: tpl.name.toLowerCase().replace(/\s+/g, '.').normalize('NFD').replace(/[\u0300-\u036f]/g, '') + '@email.com',
                     origin: tpl.origin, city: tpl.city,
