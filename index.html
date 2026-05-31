@@ -1199,6 +1199,7 @@
                                 <div class="glass p-6 rounded-xl border border-slate-700/50">
                                     <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center"><i class="fa-solid fa-building mr-2 text-purple-400 text-lg"></i>Interesse</h4>
                                     <div class="space-y-5 text-sm">
+                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Construtora</label><input type="text" id="ld-construtora" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead" placeholder="Ex: MRV, Tenda..."></div>
                                         <div><label class="text-slate-500 text-xs font-semibold uppercase">Empreendimento Alvo</label><input type="text" id="ld-project" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"></div>
                                         <div><label class="text-slate-500 text-xs font-semibold uppercase">Origem</label><select id="ld-origin" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"><option value="">Selecione...</option><option value="Instagram">Instagram</option><option value="Facebook">Facebook</option><option value="Google">Google Ads</option><option value="Indicação">Indicação</option><option value="Site">Site</option><option value="WhatsApp">WhatsApp</option></select></div>
                                     </div>
@@ -2819,7 +2820,7 @@ window.toggleSidebar = function() {
             });
 
             // Campos textuais
-            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','type','mcmv','subsidy','opObs','origin'].forEach(f => {
+            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin'].forEach(f => {
                 const el = document.getElementById(`ld-${f}`);
                 if(el && !el.disabled) lead[f] = el.value;
             });
@@ -3097,7 +3098,7 @@ window.toggleSidebar = function() {
             if(pBadge) { pBadge.textContent = pipeNames[lead.pipeline] || lead.pipeline; pBadge.className = 'text-sm font-bold rounded px-3 py-1 border ' + (pipeColors[lead.pipeline] || 'bg-slate-800 text-white border-slate-600'); }
             if(sBadge) sBadge.textContent = stageName;
             
-            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','type','mcmv','subsidy','opObs','origin'].forEach(f => {
+            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin'].forEach(f => {
                 const el = document.getElementById(`ld-${f}`);
                 if(el) el.value = lead[f] || '';
             });
