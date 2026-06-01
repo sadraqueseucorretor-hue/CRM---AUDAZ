@@ -1370,8 +1370,8 @@
                                      ondrop="handleFileDrop(event)" ondragover="event.preventDefault(); this.classList.add('border-primary');" ondragleave="this.classList.remove('border-primary');">
                                     <i class="fa-solid fa-cloud-arrow-up text-4xl text-slate-500 group-hover:text-primary mb-3 transition-colors"></i>
                                     <h3 class="text-lg font-bold text-white mb-1">Clique ou Arraste os arquivos</h3>
-                                    <p class="text-sm text-slate-400">Suporta PDF, JPG, PNG e JPEG (Máx 2MB por arquivo)</p>
-                                    <input type="file" id="file-upload-lead" multiple accept=".pdf, image/*" class="hidden" onchange="handleLeadFileUpload(event)">
+                                    <p class="text-sm text-slate-400">Somente PDF (máx. 5 MB por arquivo)</p>
+                                    <input type="file" id="file-upload-lead" multiple accept="application/pdf,.pdf" class="hidden" onchange="handleLeadFileUpload(event)">
                                 </div>
 
                                 <div class="flex-1 glass p-6 rounded-xl border border-slate-700/50 overflow-y-auto custom-scrollbar">
@@ -3597,8 +3597,13 @@ window.toggleSidebar = function() {
             if(!lead.files) lead.files = [];
 
             const uploadPromises = Array.from(files).map(async file => {
-                if(file.size > 10 * 1024 * 1024) {
-                    showToast(`${file.name}: máximo 10MB`, 'error');
+                const ehPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+                if(!ehPdf) {
+                    showToast(`${file.name}: somente arquivos PDF são aceitos.`, 'error');
+                    return;
+                }
+                if(file.size > 5 * 1024 * 1024) {
+                    showToast(`${file.name}: tamanho máximo é 5 MB.`, 'error');
                     return;
                 }
                 try {
