@@ -598,6 +598,7 @@
                                     <button onclick="exportBackupJSON()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition-colors flex items-center gap-2"><i class="fa-solid fa-download"></i> Exportar JSON</button>
                                     <button onclick="document.getElementById('file-import-backup').click()" class="bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold transition-colors flex items-center gap-2"><i class="fa-solid fa-upload"></i> Restaurar Backup</button>
                                     <button onclick="exportLeadsCSV()" class="bg-emerald-700 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold transition-colors flex items-center gap-2"><i class="fa-solid fa-file-csv"></i> Exportar Leads CSV</button>
+                                    <button onclick="ressincronizarPlanilha()" class="bg-green-700 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-bold transition-colors flex items-center gap-2"><i class="fa-solid fa-rotate"></i> Ressincronizar Planilha</button>
                                     <input type="file" id="file-import-backup" accept=".json" class="hidden" onchange="importBackupJSON(event)">
                                 </div>
                                 <div class="border-t border-slate-700/50 pt-6">
@@ -1695,6 +1696,23 @@
                 });
                 if(tracked) lead.naPlanilha = true;
             } catch(e) { console.error('Erro ao sincronizar planilha:', e); }
+        }
+
+        // Reenvia todos os leads relevantes para a planilha (no formato atual)
+        window.ressincronizarPlanilha = async function() {
+            const leads = DB.leads.filter(l => ['analise','financeiro','cancelados'].includes(l.pipeline));
+            if(!leads.length) { showToast('Nenhum lead em Análise/Ganho/Cancelado para sincronizar.', 'info'); return; }
+            if(!confirm(`Reenviar ${leads.length} lead(s) para a planilha no formato atual?\n\nDica: limpe as linhas antigas da planilha antes (deixando só o cabeçalho).`)) return;
+            showToast(`Sincronizando ${leads.length} leads... aguarde.`, 'info');
+            let n = 0;
+            for(const l of leads) {
+                l.naPlanilha = true; // garante que cancelados também sejam enviados
+                await sincronizarPlanilha(l);
+                n++;
+                await new Promise(r => setTimeout(r, 200)); // evita sobrecarregar o robô
+            }
+            await saveLeadsDB();
+            showToast(`Planilha ressincronizada! ${n} leads enviados.`, 'success');
         }
 
         // Quando entra em Análise: registra a data/mês de referência (uma vez) e sincroniza
