@@ -186,7 +186,7 @@
                             <input type="checkbox" id="login-remember" class="w-4 h-4 rounded bg-slate-800 border-slate-600 text-primary focus:ring-primary">
                             <span class="text-sm text-slate-400 group-hover:text-white transition-colors">Lembrar-me</span>
                         </label>
-                        <a href="#" class="text-sm text-primary hover:text-blue-400 font-medium transition-colors">Esqueceu a senha?</a>
+                        <a href="#" onclick="abrirRecuperarSenha(event)" class="text-sm text-primary hover:text-blue-400 font-medium transition-colors">Esqueceu a senha?</a>
                     </div>
 
                     <button type="submit" id="btn-login" class="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl py-3.5 font-bold shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_30px_rgba(59,130,246,0.6)] transition-all flex justify-center items-center gap-2">
@@ -208,6 +208,22 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: RECUPERAR SENHA -->
+    <div id="modal-recuperar-senha" class="fixed inset-0 bg-darker/95 backdrop-blur-md z-[200] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="glass-login rounded-2xl w-full max-w-md p-8">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-key text-primary"></i> Recuperar Senha</h3>
+                <button onclick="closeModal('modal-recuperar-senha')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <p class="text-sm text-slate-400 mb-6">Digite seu e-mail cadastrado. Enviaremos uma <b>senha temporária</b> para ele.</p>
+            <input type="email" id="rec-email" class="w-full rounded-xl px-4 py-3 text-sm mb-4 bg-slate-900 border border-slate-700 text-white focus:border-primary focus:outline-none" placeholder="voce@audaz.com" autocomplete="email">
+            <button onclick="enviarRecuperarSenha()" id="rec-btn" class="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl py-3 font-bold transition-all flex justify-center items-center gap-2">
+                <span>Enviar senha temporária</span>
+                <div id="rec-loader" class="loader hidden"></div>
+            </button>
         </div>
     </div>
 
@@ -2067,6 +2083,56 @@
                     } else handleLogout();
                 } catch(e) { handleLogout(); }
             } else { showLogin(); }
+        }
+
+        // ====================================================================
+        // RECUPERAÇÃO DE SENHA (envia senha temporária por email via robô Google)
+        // ====================================================================
+        window.abrirRecuperarSenha = function(e) {
+            if(e) e.preventDefault();
+            const emailLogin = document.getElementById('login-email').value.trim();
+            document.getElementById('rec-email').value = emailLogin;
+            openModal('modal-recuperar-senha');
+        }
+
+        window.enviarRecuperarSenha = async function() {
+            const email = document.getElementById('rec-email').value.trim().toLowerCase();
+            if(!email) { showToast('Digite seu e-mail.', 'error'); return; }
+            const btn = document.getElementById('rec-btn');
+            const loader = document.getElementById('rec-loader');
+            btn.disabled = true; loader.classList.remove('hidden');
+            try {
+                const user = DB.users.find(u => (u.email || '').toLowerCase() === email);
+                if(!user) {
+                    showToast('E-mail não encontrado no sistema.', 'error');
+                    return;
+                }
+                // Gera senha temporária legível
+                const tempPass = 'Audaz' + Math.floor(1000 + Math.random() * 9000);
+                user.pass = tempPass;
+                await saveUsersDB();
+                // Envia o email pelo robô do Google (mesma URL da planilha)
+                await fetch(SHEETS_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'enviarEmail',
+                        para: user.email,
+                        assunto: 'CRM Audaz — Recuperação de senha',
+                        mensagem: 'Olá, ' + user.name + '!\n\n' +
+                            'Sua senha temporária de acesso ao CRM é:\n\n' +
+                            '    ' + tempPass + '\n\n' +
+                            'Entre no sistema com ela e troque a senha no seu Perfil.\n\n' +
+                            'Se você não solicitou, ignore este e-mail.\n\nEquipe CRM Audaz'
+                    })
+                });
+                closeModal('modal-recuperar-senha');
+                showToast('Senha temporária enviada para ' + user.email + '. Verifique seu e-mail.', 'success');
+            } catch(err) {
+                showToast('Erro ao enviar. Tente novamente.', 'error');
+            } finally {
+                btn.disabled = false; loader.classList.add('hidden');
+            }
         }
 
         window.handleLogin = function(e) {
