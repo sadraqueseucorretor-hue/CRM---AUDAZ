@@ -970,14 +970,18 @@
                             <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">% Comissão Corretor</label>
                             <input type="number" id="mv-pct-corretor" min="0" step="0.1" value="2" class="w-full rounded-lg px-4 py-3 text-sm" oninput="recalcComissao()">
                         </div>
-                        <div class="col-span-2 grid grid-cols-2 gap-3">
+                        <div class="col-span-2 grid grid-cols-3 gap-3">
                             <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
                                 <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Comissão Total</p>
                                 <p id="mv-comissao-total-display" class="text-emerald-400 font-bold text-sm">R$ 0,00</p>
                             </div>
                             <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
-                                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Comissão Corretor</p>
+                                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Corretor</p>
                                 <p id="mv-comissao-corretor-display" class="text-emerald-300 font-bold text-sm">R$ 0,00</p>
+                            </div>
+                            <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
+                                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Imobiliária</p>
+                                <p id="mv-comissao-imob-display" class="text-blue-300 font-bold text-sm">R$ 0,00</p>
                             </div>
                         </div>
                         <div>
@@ -1682,9 +1686,11 @@
                         empreendimento: lead.project || '',
                         analise: resultadoAnalise(lead),
                         situacao: situacaoAtual(lead),
+                        ganho: lead.pipeline === 'financeiro' ? 'Sim' : (lead.pipeline === 'cancelados' ? 'Não' : ''),
                         vgv: lead.pipeline === 'financeiro' ? (lead.vgv || 0) : '',
                         comissaoTotal: lead.pipeline === 'financeiro' ? (lead.commissionValue || 0) : '',
-                        comissaoCorretor: lead.pipeline === 'financeiro' ? (lead.commissionBroker || 0) : ''
+                        comissaoCorretor: lead.pipeline === 'financeiro' ? (lead.commissionBroker || 0) : '',
+                        comissaoImob: lead.pipeline === 'financeiro' ? ((lead.commissionValue || 0) - (lead.commissionBroker || 0)) : ''
                     })
                 });
                 if(tracked) lead.naPlanilha = true;
@@ -4535,8 +4541,12 @@ window.toggleSidebar = function() {
             const pctCorretor = parseFloat(document.getElementById('mv-pct-corretor').value) || 0;
             const totalEl = document.getElementById('mv-comissao-total-display');
             const corrEl = document.getElementById('mv-comissao-corretor-display');
-            if(totalEl) totalEl.textContent = formatCurrency(vgv * pctTotal / 100);
-            if(corrEl) corrEl.textContent = formatCurrency(vgv * pctCorretor / 100);
+            const imobEl = document.getElementById('mv-comissao-imob-display');
+            const total = vgv * pctTotal / 100;
+            const corr = vgv * pctCorretor / 100;
+            if(totalEl) totalEl.textContent = formatCurrency(total);
+            if(corrEl) corrEl.textContent = formatCurrency(corr);
+            if(imobEl) imobEl.textContent = formatCurrency(total - corr);
         }
 
         function executePipelineMove(lead, targetPipeline, financialData = null, customStage = null) {
