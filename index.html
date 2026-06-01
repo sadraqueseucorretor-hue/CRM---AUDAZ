@@ -1635,15 +1635,22 @@
             'aprovado': 'Aprovado', 'reprovado': 'Reprovado', 'com-pendencia': 'Pendente',
             'em-analise': 'Em Análise', 'analise-pendente': 'Análise Pendente', 'bacen': 'BACEN'
         };
-        function statusDoLead(lead) {
+        // Resultado da Análise de Crédito (Aprovado/Reprovado/Pendente...) — fica registrado no lead
+        function resultadoAnalise(lead) {
+            if(lead.pipeline === 'analise') {
+                return STATUS_ANALISE_MAP[lead.stageId] || PIPELINES.analise.find(s => s.id === lead.stageId)?.title || 'Em Análise';
+            }
+            // Fora da análise: mantém o último resultado registrado
+            return lead.analiseResult || '';
+        }
+        // Situação Atual (onde o negócio está agora)
+        function situacaoAtual(lead) {
             if(lead.pipeline === 'cancelados') return 'Cancelado';
             if(lead.pipeline === 'financeiro') {
                 const etapa = PIPELINES.financeiro.find(s => s.id === lead.stageId)?.title || '';
                 return 'Ganho' + (etapa ? ' - ' + etapa : '');
             }
-            if(lead.pipeline === 'analise') {
-                return STATUS_ANALISE_MAP[lead.stageId] || PIPELINES.analise.find(s => s.id === lead.stageId)?.title || 'Em Análise';
-            }
+            if(lead.pipeline === 'analise') return 'Em Análise';
             if(lead.pipeline === 'leads') return 'Em Atendimento';
             return lead.pipeline;
         }
@@ -1655,6 +1662,8 @@
             const isCancel = lead.pipeline === 'cancelados';
             // Cancelamento só atualiza se o lead já existia na planilha
             if(!tracked && !(isCancel && lead.naPlanilha)) return;
+            // Registra no lead o último resultado da análise (para persistir após sair da análise)
+            if(lead.pipeline === 'analise') lead.analiseResult = resultadoAnalise(lead);
             try {
                 const broker = DB.users.find(u => u.name === lead.broker);
                 const agora = new Date();
@@ -1671,7 +1680,8 @@
                         cliente: lead.name || '',
                         construtora: lead.construtora || '',
                         empreendimento: lead.project || '',
-                        status: statusDoLead(lead),
+                        analise: resultadoAnalise(lead),
+                        situacao: situacaoAtual(lead),
                         vgv: lead.pipeline === 'financeiro' ? (lead.vgv || 0) : '',
                         comissaoTotal: lead.pipeline === 'financeiro' ? (lead.commissionValue || 0) : '',
                         comissaoCorretor: lead.pipeline === 'financeiro' ? (lead.commissionBroker || 0) : ''
