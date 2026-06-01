@@ -960,15 +960,25 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div class="col-span-2">
                             <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">VGV (Valor Geral de Vendas) — R$ *</label>
-                            <input type="number" id="mv-vgv" required min="0" step="1000" class="w-full rounded-lg px-4 py-3 text-sm" placeholder="450000,00">
+                            <input type="number" id="mv-vgv" required min="0" step="1000" class="w-full rounded-lg px-4 py-3 text-sm" placeholder="450000,00" oninput="recalcComissao()">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Valor da Venda — R$</label>
-                            <input type="number" id="mv-sale-value" min="0" step="1000" class="w-full rounded-lg px-4 py-3 text-sm" placeholder="450000,00">
+                            <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">% Comissão Total</label>
+                            <input type="number" id="mv-pct-total" min="0" step="0.1" value="4" class="w-full rounded-lg px-4 py-3 text-sm" oninput="recalcComissao()">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Comissão — R$</label>
-                            <input type="number" id="mv-commission" min="0" step="100" class="w-full rounded-lg px-4 py-3 text-sm" placeholder="13500,00">
+                            <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">% Comissão Corretor</label>
+                            <input type="number" id="mv-pct-corretor" min="0" step="0.1" value="2" class="w-full rounded-lg px-4 py-3 text-sm" oninput="recalcComissao()">
+                        </div>
+                        <div class="col-span-2 grid grid-cols-2 gap-3">
+                            <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
+                                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Comissão Total</p>
+                                <p id="mv-comissao-total-display" class="text-emerald-400 font-bold text-sm">R$ 0,00</p>
+                            </div>
+                            <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
+                                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Comissão Corretor</p>
+                                <p id="mv-comissao-corretor-display" class="text-emerald-300 font-bold text-sm">R$ 0,00</p>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Corretor</label>
@@ -1620,8 +1630,31 @@
             return lead.numId ? formatNumId(lead.numId) : lead.id;
         }
 
-        // Envia o lead para a planilha quando entra em Análise (cria a linha)
-        async function enviarParaPlanilhaAnalise(lead) {
+        // Calcula o status atual do lead conforme o pipeline/etapa
+        const STATUS_ANALISE_MAP = {
+            'aprovado': 'Aprovado', 'reprovado': 'Reprovado', 'com-pendencia': 'Pendente',
+            'em-analise': 'Em Análise', 'analise-pendente': 'Análise Pendente', 'bacen': 'BACEN'
+        };
+        function statusDoLead(lead) {
+            if(lead.pipeline === 'cancelados') return 'Cancelado';
+            if(lead.pipeline === 'financeiro') {
+                const etapa = PIPELINES.financeiro.find(s => s.id === lead.stageId)?.title || '';
+                return 'Ganho' + (etapa ? ' - ' + etapa : '');
+            }
+            if(lead.pipeline === 'analise') {
+                return STATUS_ANALISE_MAP[lead.stageId] || PIPELINES.analise.find(s => s.id === lead.stageId)?.title || 'Em Análise';
+            }
+            if(lead.pipeline === 'leads') return 'Em Atendimento';
+            return lead.pipeline;
+        }
+
+        // Envia/atualiza a linha completa do lead na planilha (sempre busca pelo ID)
+        async function sincronizarPlanilha(lead) {
+            if(!lead) return;
+            const tracked = ['analise','financeiro'].includes(lead.pipeline);
+            const isCancel = lead.pipeline === 'cancelados';
+            // Cancelamento só atualiza se o lead já existia na planilha
+            if(!tracked && !(isCancel && lead.naPlanilha)) return;
             try {
                 const broker = DB.users.find(u => u.name === lead.broker);
                 const agora = new Date();
@@ -1629,36 +1662,36 @@
                     method: 'POST', mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
-                        action: 'enviarAnalise',
+                        action: 'sync',
                         id: leadSheetId(lead),
-                        data: agora.toLocaleDateString('pt-BR'),
-                        mes: MESES_PT[agora.getMonth()] + '/' + agora.getFullYear(),
+                        data: lead.dataAnalise || agora.toLocaleDateString('pt-BR'),
+                        mes: lead.mesAnalise || (MESES_PT[agora.getMonth()] + '/' + agora.getFullYear()),
                         corretor: lead.broker || '',
                         equipe: broker?.team || '',
                         cliente: lead.name || '',
-                        construtora: lead.construtora || ''
+                        construtora: lead.construtora || '',
+                        empreendimento: lead.project || '',
+                        status: statusDoLead(lead),
+                        vgv: lead.pipeline === 'financeiro' ? (lead.vgv || 0) : '',
+                        comissaoTotal: lead.pipeline === 'financeiro' ? (lead.commissionValue || 0) : '',
+                        comissaoCorretor: lead.pipeline === 'financeiro' ? (lead.commissionBroker || 0) : ''
                     })
                 });
-            } catch(e) { console.error('Erro ao enviar para planilha:', e); }
+                if(tracked) lead.naPlanilha = true;
+            } catch(e) { console.error('Erro ao sincronizar planilha:', e); }
         }
 
-        // Atualiza o status na planilha (Aprovado / Reprovado / Pendente / etc.)
-        const STATUS_ANALISE_MAP = {
-            'aprovado': 'Aprovado', 'reprovado': 'Reprovado', 'com-pendencia': 'Pendente',
-            'em-analise': 'Em Análise', 'analise-pendente': 'Análise Pendente', 'bacen': 'BACEN'
-        };
+        // Quando entra em Análise: registra a data/mês de referência (uma vez) e sincroniza
+        async function enviarParaPlanilhaAnalise(lead) {
+            const agora = new Date();
+            if(!lead.dataAnalise) lead.dataAnalise = agora.toLocaleDateString('pt-BR');
+            if(!lead.mesAnalise) lead.mesAnalise = MESES_PT[agora.getMonth()] + '/' + agora.getFullYear();
+            await sincronizarPlanilha(lead);
+        }
+
+        // Alias mantido para compatibilidade — agora sincroniza qualquer pipeline relevante
         async function sincronizarStatusAnalise(lead) {
-            if(!lead || lead.pipeline !== 'analise') return;
-            const status = STATUS_ANALISE_MAP[lead.stageId]
-                || PIPELINES.analise.find(s => s.id === lead.stageId)?.title
-                || lead.stageId;
-            try {
-                await fetch(SHEETS_URL, {
-                    method: 'POST', mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'atualizarStatus', id: leadSheetId(lead), status })
-                });
-            } catch(e) { console.error('Erro ao atualizar status na planilha:', e); }
+            await sincronizarPlanilha(lead);
         }
         function getTime() { return new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); }
         function getDateStr() { return new Date().toLocaleDateString('pt-BR'); }
@@ -4402,10 +4435,11 @@ window.toggleSidebar = function() {
             document.getElementById('mv-financial-form').classList.add('hidden');
             document.getElementById('mv-stage-section').classList.add('hidden');
             document.getElementById('mv-vgv').value = lead.vgv || '';
-            document.getElementById('mv-sale-value').value = lead.propertyValue || lead.saleValue || '';
-            document.getElementById('mv-commission').value = lead.commissionValue || '';
+            document.getElementById('mv-pct-total').value = lead.commissionPctTotal != null ? lead.commissionPctTotal : 4;
+            document.getElementById('mv-pct-corretor').value = lead.commissionPctCorretor != null ? lead.commissionPctCorretor : 2;
             document.getElementById('mv-broker').value = lead.broker || '';
             document.getElementById('mv-sale-date').value = lead.saleDate ? lead.saleDate.split('T')[0] : new Date().toISOString().split('T')[0];
+            recalcComissao();
 
             currentMoveTarget = null;
             openModal('modal-move-client');
@@ -4466,18 +4500,33 @@ window.toggleSidebar = function() {
                 return;
             }
 
-            const saleValue = parseFloat(document.getElementById('mv-sale-value').value) || 0;
-            const commission = parseFloat(document.getElementById('mv-commission').value) || 0;
+            const pctTotal = parseFloat(document.getElementById('mv-pct-total').value) || 0;
+            const pctCorretor = parseFloat(document.getElementById('mv-pct-corretor').value) || 0;
+            const comissaoTotal = vgv * pctTotal / 100;
+            const comissaoCorretor = vgv * pctCorretor / 100;
             const broker = document.getElementById('mv-broker').value || lead.broker;
             const saleDate = document.getElementById('mv-sale-date').value || new Date().toISOString().split('T')[0];
 
             lead.vgv = vgv;
-            lead.saleValue = saleValue;
-            lead.commissionValue = commission;
+            lead.commissionPctTotal = pctTotal;
+            lead.commissionPctCorretor = pctCorretor;
+            lead.commissionValue = comissaoTotal;          // comissão total (R$)
+            lead.commissionBroker = comissaoCorretor;      // comissão do corretor (R$)
             lead.broker = broker;
             lead.saleDate = saleDate;
 
-            executePipelineMove(lead, 'financeiro', { vgv, saleValue, commission });
+            executePipelineMove(lead, 'financeiro', { vgv, comissaoTotal, comissaoCorretor });
+        }
+
+        // Recalcula a comissão exibida no formulário de venda
+        window.recalcComissao = function() {
+            const vgv = parseFloat(document.getElementById('mv-vgv').value) || 0;
+            const pctTotal = parseFloat(document.getElementById('mv-pct-total').value) || 0;
+            const pctCorretor = parseFloat(document.getElementById('mv-pct-corretor').value) || 0;
+            const totalEl = document.getElementById('mv-comissao-total-display');
+            const corrEl = document.getElementById('mv-comissao-corretor-display');
+            if(totalEl) totalEl.textContent = formatCurrency(vgv * pctTotal / 100);
+            if(corrEl) corrEl.textContent = formatCurrency(vgv * pctCorretor / 100);
         }
 
         function executePipelineMove(lead, targetPipeline, financialData = null, customStage = null) {
@@ -4510,6 +4559,7 @@ window.toggleSidebar = function() {
             if(targetPipeline === 'financeiro') {
                 showToast(`🎉 Venda registrada! ${lead.name} movido para Ganhos.`, 'success');
                 addNotification(`💰 Venda fechada: ${lead.name} | VGV ${formatCurrency(lead.vgv)}`, 'success');
+                sincronizarPlanilha(lead); // → atualiza planilha com Ganho + VGV + comissões
             } else if(targetPipeline === 'analise') {
                 showToast(`${lead.name} enviado para Análise de Crédito.`, 'info');
                 addNotification(`Lead "${lead.name}" enviado para Análise`, 'info');
@@ -4771,6 +4821,7 @@ window.toggleSidebar = function() {
             lead.timeline.unshift(`[${t}] ${currentUser.name} CANCELOU o lead. Motivo: ${reason}${obs ? ' | Obs: ' + obs : ''}`);
 
             saveLeadsDB();
+            sincronizarPlanilha(lead); // → marca como Cancelado (vermelho) na planilha, se já estava lá
             closeModal('modal-cancel-lead');
             closeModal('modal-lead-details');
             showToast(`Lead "${lead.name}" cancelado. Disponível em "Leads Cancelados".`, 'warning');
@@ -4801,6 +4852,7 @@ window.toggleSidebar = function() {
             // Mantém cancelReason/canceledAt como histórico, mas marca reativação
             
             saveLeadsDB();
+            sincronizarPlanilha(lead); // → atualiza status na planilha após reativar
             renderCancelados();
             showToast(`Lead "${lead.name}" reativado com sucesso!`, 'success');
             addNotification(`${lead.name} foi reativado por ${currentUser.name}`, 'success');
