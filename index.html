@@ -692,6 +692,35 @@
                                         <p><b class="text-white">3.</b> Clique em <b>Implantar → Nova implantação → App da Web</b>. Configure: <b>Executar como: Eu</b> · <b>Quem pode acessar: Qualquer pessoa</b>. Autorize quando pedir.</p>
                                         <p><b class="text-white">4.</b> Copie o <b>URL da Web App</b> que aparece e cole no campo acima. Clique em <b>Salvar</b> e depois em <b>Testar</b>.</p>
                                         <p class="text-amber-300 text-xs"><i class="fa-solid fa-triangle-exclamation"></i> Ao mudar o código do robô, sempre republique com <b>"Nova versão"</b> (Gerenciar implantações → lápis ✏️).</p>
+
+                                        <div class="border-t border-slate-700/50 pt-4 mt-2">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs font-bold text-green-300 uppercase tracking-wide"><i class="fa-solid fa-robot mr-1"></i> Código do robô (cole no Apps Script)</span>
+                                                <button onclick="copiarCodigoRobo()" class="bg-slate-700 hover:bg-primary/30 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2"><i class="fa-solid fa-copy"></i> Copiar código</button>
+                                            </div>
+                                            <textarea id="sheets-robo-code" readonly rows="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-[11px] text-green-300 font-mono leading-relaxed" spellcheck="false">function doPost(e) {
+  var d = JSON.parse(e.postData.contents);
+  if (d.action === "enviarEmail") {
+    MailApp.sendEmail(d.para, d.assunto, d.mensagem);
+    return ContentService.createTextOutput(JSON.stringify({ok:true}));
+  }
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  var ids = sheet.getRange("A:A").getValues();
+  var linha = -1;
+  for (var i = 1; i < ids.length; i++) {
+    if (String(ids[i][0]) === String(d.id)) { linha = i + 1; break; }
+  }
+  var row = [d.id, d.data, d.mes, d.corretor, d.equipe, d.cliente, d.construtora, d.empreendimento, d.analise, d.situacao, d.ganho, d.vgv, d.comissaoTotal, d.comissaoCorretor, d.comissaoImob];
+  if (linha === -1) { sheet.appendRow(row); linha = sheet.getLastRow(); }
+  else { sheet.getRange(linha, 1, 1, row.length).setValues([row]); }
+  var sit = String(d.situacao || "");
+  var cor = null;
+  if (sit.indexOf("Cancelado") === 0) cor = "#f4cccc";
+  else if (sit.indexOf("Ganho") === 0) cor = "#d9ead3";
+  sheet.getRange(linha, 1, 1, row.length).setBackground(cor);
+  return ContentService.createTextOutput(JSON.stringify({ok:true}));
+}</textarea>
+                                        </div>
                                     </div>
                                 </details>
                             </div>
@@ -1741,6 +1770,16 @@
                 });
                 if(tracked) lead.naPlanilha = true;
             } catch(e) { console.error('Erro ao sincronizar planilha:', e); }
+        }
+
+        // Copia o código do robô para a área de transferência
+        window.copiarCodigoRobo = function() {
+            const ta = document.getElementById('sheets-robo-code');
+            if(!ta) return;
+            ta.select();
+            navigator.clipboard.writeText(ta.value)
+                .then(() => showToast('Código copiado! Cole no Apps Script.', 'success'))
+                .catch(() => { document.execCommand('copy'); showToast('Código copiado!', 'success'); });
         }
 
         // Salva o link do robô configurado pelo Diretor
