@@ -669,6 +669,33 @@
                                 </div>
                             </div>
 
+                            <!-- INTEGRAÇÃO COM GOOGLE SHEETS -->
+                            <div id="prof-sheets-panel" class="glass p-8 rounded-2xl border border-slate-700/50 hidden mt-6">
+                                <h4 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-700/50 pb-3"><i class="fa-solid fa-table-cells text-green-400 mr-2"></i> Integração com Google Sheets</h4>
+                                <p class="text-sm text-slate-400 mb-6">Conecte o CRM a uma planilha do Google para registrar automaticamente as análises e vendas.</p>
+
+                                <div class="mb-6">
+                                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Link do robô (Web App URL)</label>
+                                    <div class="flex gap-2 flex-wrap">
+                                        <input type="text" id="sheets-url-input" class="flex-1 min-w-[280px] bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-primary focus:outline-none" placeholder="https://script.google.com/macros/s/.../exec">
+                                        <button onclick="salvarSheetsURL()" class="bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-save"></i> Salvar</button>
+                                        <button onclick="testarSheets()" class="bg-green-700 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-flask"></i> Testar</button>
+                                    </div>
+                                </div>
+
+                                <details class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-5">
+                                    <summary class="text-sm font-bold text-blue-300 cursor-pointer flex items-center gap-2"><i class="fa-solid fa-circle-question"></i> Como integrar (passo a passo)</summary>
+                                    <div class="mt-4 text-sm text-slate-300 space-y-3 leading-relaxed">
+                                        <p><b class="text-white">1.</b> Crie uma planilha no Google Sheets. Na linha 1, coloque os títulos (15 colunas):<br>
+                                        <span class="text-xs text-slate-400">ID · Data da Análise · Mês Referência · Corretor · Equipe · Cliente · Construtora · Empreendimento · Em Análise · Status Atual · Se foi Ganho · VGV · Comissão Total · Comissão Corretor · Comissão Imob</span></p>
+                                        <p><b class="text-white">2.</b> Na planilha: menu <b>Extensões → Apps Script</b>. Apague o que houver e cole o código do robô (peça ao suporte/programador o código atualizado).</p>
+                                        <p><b class="text-white">3.</b> Clique em <b>Implantar → Nova implantação → App da Web</b>. Configure: <b>Executar como: Eu</b> · <b>Quem pode acessar: Qualquer pessoa</b>. Autorize quando pedir.</p>
+                                        <p><b class="text-white">4.</b> Copie o <b>URL da Web App</b> que aparece e cole no campo acima. Clique em <b>Salvar</b> e depois em <b>Testar</b>.</p>
+                                        <p class="text-amber-300 text-xs"><i class="fa-solid fa-triangle-exclamation"></i> Ao mudar o código do robô, sempre republique com <b>"Nova versão"</b> (Gerenciar implantações → lápis ✏️).</p>
+                                    </div>
+                                </details>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -1580,7 +1607,8 @@
         const DB_KEYS = {
             USERS: 'audaz_users', LEADS: 'audaz_leads', SESSION: 'audaz_session',
             LOGGED_USER: 'audaz_logged_user', LAST_PAGE: 'audaz_last_page',
-            NOTIFICATIONS: 'audaz_notifications', PIPELINES: 'audaz_pipelines', LISTAS: 'audaz_listas'
+            NOTIFICATIONS: 'audaz_notifications', PIPELINES: 'audaz_pipelines', LISTAS: 'audaz_listas',
+            SHEETS: 'audaz_sheets_url'
         };
 
         const PIPELINES_DEFAULT = {
@@ -1644,7 +1672,8 @@
         // ====================================================================
         // INTEGRAÇÃO COM GOOGLE SHEETS (planilha de análises)
         // ====================================================================
-        const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw6grA_LjvIisXi3PYKCl3O0r5qLYDO54IMcNdVXNeqTNwgbtpy0_oDcTzbIglcm8LGiA/exec';
+        // Link do robô do Google (configurável pelo Diretor no Perfil)
+        let SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw6grA_LjvIisXi3PYKCl3O0r5qLYDO54IMcNdVXNeqTNwgbtpy0_oDcTzbIglcm8LGiA/exec';
         const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
         function leadSheetId(lead) {
@@ -1712,6 +1741,40 @@
                 });
                 if(tracked) lead.naPlanilha = true;
             } catch(e) { console.error('Erro ao sincronizar planilha:', e); }
+        }
+
+        // Salva o link do robô configurado pelo Diretor
+        window.salvarSheetsURL = async function() {
+            const url = (document.getElementById('sheets-url-input').value || '').trim();
+            if(!url) { showToast('Cole o link do robô.', 'error'); return; }
+            if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(url)) {
+                if(!confirm('Esse link não parece um Web App do Google (termina em /exec). Salvar mesmo assim?')) return;
+            }
+            await saveSheetsURL(url);
+            triggerAutoSaveUI();
+            showToast('Link da planilha salvo!', 'success');
+        }
+
+        // Testa a conexão enviando uma linha de teste para a planilha
+        window.testarSheets = async function() {
+            const url = (document.getElementById('sheets-url-input').value || '').trim();
+            if(!url) { showToast('Cole o link do robô primeiro.', 'error'); return; }
+            try {
+                await fetch(url, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'sync', id: '#TESTE-CONEXAO',
+                        data: getDateStr(), mes: MESES_PT[new Date().getMonth()] + '/' + new Date().getFullYear(),
+                        corretor: 'Teste', equipe: 'Teste', cliente: 'TESTE DE CONEXÃO',
+                        construtora: '', empreendimento: '', analise: 'Em Análise',
+                        situacao: 'Em Análise', ganho: '', vgv: '', comissaoTotal: '', comissaoCorretor: '', comissaoImob: ''
+                    })
+                });
+                showToast('Teste enviado! Confira se apareceu uma linha "TESTE DE CONEXÃO" na planilha (pode apagar depois).', 'success');
+            } catch(e) {
+                showToast('Não foi possível enviar o teste. Verifique o link.', 'error');
+            }
         }
 
         // Reenvia todos os leads relevantes para a planilha (no formato atual)
@@ -1915,6 +1978,17 @@
                     LISTAS.empreendimentos = Array.isArray(parsed.empreendimentos) ? parsed.empreendimentos : [];
                 }
             } catch(e) { /* usa vazio */ }
+
+            // Carrega o link do robô do Google (se o Diretor configurou)
+            try {
+                const savedSheets = await dbGet(DB_KEYS.SHEETS);
+                if(savedSheets) { const u = JSON.parse(savedSheets); if(u) SHEETS_URL = u; }
+            } catch(e) { /* usa o padrão */ }
+        }
+
+        async function saveSheetsURL(url) {
+            SHEETS_URL = url;
+            await dbSet(DB_KEYS.SHEETS, JSON.stringify(url));
         }
 
         async function savePipelinesDB() {
@@ -2275,12 +2349,16 @@
                 logoPanel.classList.remove('hidden');
                 if(pipelinesPanel) { pipelinesPanel.classList.remove('hidden'); renderPipelineEditor('leads'); }
                 if(listasPanel) { listasPanel.classList.remove('hidden'); renderListasEditor(); }
+                const sheetsPanel = document.getElementById('prof-sheets-panel');
+                if(sheetsPanel) { sheetsPanel.classList.remove('hidden'); const si = document.getElementById('sheets-url-input'); if(si) si.value = SHEETS_URL; }
                 loadSysLogo();
             } else {
                 backupPanel.classList.add('hidden');
                 logoPanel.classList.add('hidden');
                 if(pipelinesPanel) pipelinesPanel.classList.add('hidden');
                 if(listasPanel) listasPanel.classList.add('hidden');
+                const sheetsPanelH = document.getElementById('prof-sheets-panel');
+                if(sheetsPanelH) sheetsPanelH.classList.add('hidden');
             }
 
             // Mostrar "Leads a Distribuir" para Diretor, Gerente e Administrativo
