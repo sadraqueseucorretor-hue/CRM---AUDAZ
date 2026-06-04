@@ -3944,6 +3944,7 @@ window.toggleSidebar = function() {
         ];
 
         window.switchPipelineTab = function(tab) {
+            _capturePipelineInputs(); // salva edições da aba atual antes de trocar
             _currentPipelineTab = tab;
             document.querySelectorAll('.pipeline-tab-btn').forEach(b => {
                 b.className = 'pipeline-tab-btn px-4 py-2 rounded-lg text-sm font-bold text-slate-400 hover:bg-slate-700 transition-colors';
@@ -3953,9 +3954,21 @@ window.toggleSidebar = function() {
             renderPipelineEditor(tab);
         }
 
+        // Lê o que está nos campos de volta para o array (evita perder edições não salvas)
+        function _capturePipelineInputs() {
+            const stages = PIPELINES[_currentPipelineTab];
+            if(!stages) return;
+            document.querySelectorAll('.pipeline-stage-input').forEach((input, i) => {
+                if(stages[i]) stages[i].title = input.value.trim() || stages[i].title;
+            });
+            document.querySelectorAll('.pipeline-stage-color').forEach((sel, i) => {
+                if(stages[i]) stages[i].color = sel.value;
+            });
+        }
+        function _escAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
         function renderPipelineEditor(tab) {
             const stages = PIPELINES[tab];
-            const colorOptions = PIPELINE_COLORS.map(c => `<option value="${c.value}">${c.label}</option>`).join('');
             const container = document.getElementById('pipeline-editor-container');
             if(!container) return;
 
@@ -3963,12 +3976,12 @@ window.toggleSidebar = function() {
                 <div class="space-y-3" id="pipeline-stages-list">
                     ${stages.map((s, i) => `
                     <div class="flex items-center gap-3 bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3" data-index="${i}">
-                        <i class="fa-solid fa-grip-vertical text-slate-600 cursor-grab text-sm"></i>
-                        <div class="w-3 h-3 rounded-full flex-shrink-0 ${s.color.replace('border-l-','bg-').replace('-400','-400').replace('-500','-500')}"></div>
-                        <input type="text" value="${s.title}" data-index="${i}" data-field="title"
+                        <i class="fa-solid fa-grip-vertical text-slate-600 text-sm"></i>
+                        <div class="w-3 h-3 rounded-full flex-shrink-0 ${s.color.replace('border-l-','bg-')}"></div>
+                        <input type="text" value="${_escAttr(s.title)}" data-index="${i}" data-field="title"
                             class="pipeline-stage-input flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
                             placeholder="Nome da etapa">
-                        <select data-index="${i}" data-field="color"
+                        <select data-index="${i}" data-field="color" onchange="_capturePipelineInputs(); renderPipelineEditor(_currentPipelineTab)"
                             class="pipeline-stage-color bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
                             ${PIPELINE_COLORS.map(c => `<option value="${c.value}" ${s.color === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
                         </select>
@@ -3980,6 +3993,7 @@ window.toggleSidebar = function() {
         }
 
         window.addPipelineStage = function() {
+            _capturePipelineInputs(); // preserva o que já foi digitado
             const stages = PIPELINES[_currentPipelineTab];
             const newId = 'etapa-' + Date.now();
             stages.push({ id: newId, title: 'Nova Etapa', color: 'border-l-slate-400' });
@@ -3990,6 +4004,7 @@ window.toggleSidebar = function() {
         }
 
         window.removePipelineStage = function(index) {
+            _capturePipelineInputs(); // preserva edições antes de remover
             const stages = PIPELINES[_currentPipelineTab];
             if(stages.length <= 1) { showToast('O pipeline precisa ter pelo menos 1 etapa.', 'error'); return; }
             const stage = stages[index];
