@@ -710,7 +710,7 @@
   for (var i = 1; i < ids.length; i++) {
     if (String(ids[i][0]) === String(d.id)) { linha = i + 1; break; }
   }
-  var row = [d.id, d.data, d.mes, d.corretor, d.equipe, d.cliente, d.construtora, d.empreendimento, d.analise, d.situacao, d.ganho, d.vgv, d.comissaoTotal, d.comissaoCorretor, d.comissaoImob];
+  var row = [d.id, d.data, d.mes, d.corretor, d.equipe, d.cliente, d.construtora, d.empreendimento, d.analise, d.situacao, d.ganho, d.vgv, d.comissaoTotal, d.comissaoCorretor, d.comissaoImob, d.dataGanho, d.mesGanho];
   if (linha === -1) { sheet.appendRow(row); linha = sheet.getLastRow(); }
   else { sheet.getRange(linha, 1, 1, row.length).setValues([row]); }
   var sit = String(d.situacao || "");
@@ -1735,15 +1735,28 @@
             return lead.pipeline;
         }
 
+        // Data e mês do Ganho (a partir da data da venda)
+        function dadosGanho(lead) {
+            if(lead.pipeline !== 'financeiro') return { data: '', mes: '' };
+            const sd = lead.saleDate || new Date().toISOString().split('T')[0];
+            const p = sd.split('-'); // YYYY-MM-DD
+            if(p.length === 3) {
+                return { data: p[2] + '/' + p[1] + '/' + p[0], mes: MESES_PT[parseInt(p[1],10)-1] + '/' + p[0] };
+            }
+            return { data: '', mes: '' };
+        }
+
         // Envia/atualiza a linha completa do lead na planilha (sempre busca pelo ID)
         async function sincronizarPlanilha(lead) {
             if(!lead) return;
             const tracked = ['analise','financeiro'].includes(lead.pipeline);
-            const isCancel = lead.pipeline === 'cancelados';
-            // Cancelamento só atualiza se o lead já existia na planilha
-            if(!tracked && !(isCancel && lead.naPlanilha)) return;
-            // Registra no lead o último resultado da análise (para persistir após sair da análise)
+            // Sincroniza se o lead está em análise/financeiro OU se já existe na planilha
+            // (assim edições de nome/corretor/etc. e saída do ganho também atualizam)
+            if(!tracked && !lead.naPlanilha) return;
+            // Registra no lead o último resultado da análise (persiste após sair da análise)
             if(lead.pipeline === 'analise') lead.analiseResult = resultadoAnalise(lead);
+            const ehFin = lead.pipeline === 'financeiro';
+            const ganho = dadosGanho(lead);
             try {
                 const broker = DB.users.find(u => u.name === lead.broker);
                 const agora = new Date();
@@ -1762,11 +1775,13 @@
                         empreendimento: lead.project || '',
                         analise: resultadoAnalise(lead),
                         situacao: situacaoAtual(lead),
-                        ganho: lead.pipeline === 'financeiro' ? 'Sim' : (lead.pipeline === 'cancelados' ? 'Não' : ''),
-                        vgv: lead.pipeline === 'financeiro' ? (lead.vgv || 0) : '',
-                        comissaoTotal: lead.pipeline === 'financeiro' ? (lead.commissionValue || 0) : '',
-                        comissaoCorretor: lead.pipeline === 'financeiro' ? (lead.commissionBroker || 0) : '',
-                        comissaoImob: lead.pipeline === 'financeiro' ? ((lead.commissionValue || 0) - (lead.commissionBroker || 0)) : ''
+                        ganho: ehFin ? 'Sim' : (lead.pipeline === 'cancelados' ? 'Não' : ''),
+                        vgv: ehFin ? (lead.vgv || 0) : '',
+                        comissaoTotal: ehFin ? (lead.commissionValue || 0) : '',
+                        comissaoCorretor: ehFin ? (lead.commissionBroker || 0) : '',
+                        comissaoImob: ehFin ? ((lead.commissionValue || 0) - (lead.commissionBroker || 0)) : '',
+                        dataGanho: ganho.data,
+                        mesGanho: ganho.mes
                     })
                 });
                 if(tracked) lead.naPlanilha = true;
@@ -3218,6 +3233,8 @@ window.toggleSidebar = function() {
             lead.updatedBy = currentUser.name;
 
             saveLeadsDB();
+            // Se o lead já está na planilha, atualiza nome/corretor/equipe/construtora/empreendimento
+            if(lead.naPlanilha) sincronizarPlanilha(lead);
             triggerAutoSaveUI('save-ind-lead');
         }
 
@@ -4808,6 +4825,7 @@ window.toggleSidebar = function() {
                 enviarParaPlanilhaAnalise(lead); // → registra na planilha do Google
             } else {
                 showToast(`${lead.name} retornado para o Pipeline de Leads.`, 'info');
+                if(lead.naPlanilha) sincronizarPlanilha(lead); // → reconhece a saída do Ganho na planilha
             }
 
             // Atualiza a view atual
