@@ -3965,7 +3965,7 @@ window.toggleSidebar = function() {
                 if(stages[i]) stages[i].color = sel.value;
             });
         }
-        function _escAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+        function _escAttr(s) { return String(s == null ? '' : s).split('"').join('&quot;'); }
 
         function renderPipelineEditor(tab) {
             const stages = PIPELINES[tab];
