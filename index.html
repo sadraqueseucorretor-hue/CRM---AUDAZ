@@ -1034,7 +1034,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div class="col-span-2">
                             <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">VGV (Valor Geral de Vendas) — R$ *</label>
-                            <input type="number" id="mv-vgv" required min="0" step="1000" class="w-full rounded-lg px-4 py-3 text-sm" placeholder="450000,00" oninput="recalcComissao()">
+                            <input type="text" id="mv-vgv" required class="w-full rounded-lg px-4 py-3 text-sm currency-mask" placeholder="R$ 0,00" oninput="recalcComissao()">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">% Comissão Total</label>
@@ -4672,7 +4672,7 @@ window.toggleSidebar = function() {
             // Reset form de financeiro e seleção de etapa
             document.getElementById('mv-financial-form').classList.add('hidden');
             document.getElementById('mv-stage-section').classList.add('hidden');
-            document.getElementById('mv-vgv').value = lead.vgv || '';
+            document.getElementById('mv-vgv').value = lead.vgv ? formatCurrency(lead.vgv) : '';
             document.getElementById('mv-pct-total').value = lead.commissionPctTotal != null ? lead.commissionPctTotal : 4;
             document.getElementById('mv-pct-corretor').value = lead.commissionPctCorretor != null ? lead.commissionPctCorretor : 2;
             document.getElementById('mv-broker').value = lead.broker || '';
@@ -4731,7 +4731,7 @@ window.toggleSidebar = function() {
             const lead = DB.leads.find(l => l.id === leadId);
             if(!lead) return;
 
-            const vgv = parseFloat(document.getElementById('mv-vgv').value);
+            const vgv = parseCurrency(document.getElementById('mv-vgv').value);
             if(!vgv || vgv <= 0) {
                 showToast('VGV é obrigatório para fechar a venda.', 'error');
                 document.getElementById('mv-vgv').focus();
@@ -4758,7 +4758,7 @@ window.toggleSidebar = function() {
 
         // Recalcula a comissão exibida no formulário de venda
         window.recalcComissao = function() {
-            const vgv = parseFloat(document.getElementById('mv-vgv').value) || 0;
+            const vgv = parseCurrency(document.getElementById('mv-vgv').value) || 0;
             const pctTotal = parseFloat(document.getElementById('mv-pct-total').value) || 0;
             const pctCorretor = parseFloat(document.getElementById('mv-pct-corretor').value) || 0;
             const totalEl = document.getElementById('mv-comissao-total-display');
