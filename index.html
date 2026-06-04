@@ -718,6 +718,7 @@
   if (sit.indexOf("Cancelado") === 0) cor = "#f4cccc";
   else if (sit.indexOf("Ganho") === 0) cor = "#d9ead3";
   sheet.getRange(linha, 1, 1, row.length).setBackground(cor);
+  sheet.getRange(linha, 12, 1, 4).setNumberFormat("R$ #,##0.00");
   return ContentService.createTextOutput(JSON.stringify({ok:true}));
 }</textarea>
                                         </div>
