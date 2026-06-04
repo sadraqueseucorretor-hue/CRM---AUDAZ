@@ -1055,15 +1055,10 @@
                             <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">% Comissão Total</label>
                             <input type="number" id="mv-pct-total" min="0" step="0.1" value="4" class="w-full rounded-lg px-4 py-3 text-sm" oninput="recalcComissao()">
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">% Corretor</label>
-                                <input type="number" id="mv-pct-corretor" min="0" step="0.1" value="2" class="w-full rounded-lg px-3 py-3 text-sm" oninput="recalcComissao()">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">% Gerente</label>
-                                <input type="number" id="mv-pct-gerente" min="0" step="0.1" value="10" class="w-full rounded-lg px-3 py-3 text-sm" oninput="recalcComissao()">
-                            </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">% Gerente <span class="text-slate-500 normal-case">(corretor = 50% da líquida)</span></label>
+                            <input type="number" id="mv-pct-gerente" min="0" step="0.1" value="10" class="w-full rounded-lg px-3 py-3 text-sm" oninput="recalcComissao()">
+                            <input type="hidden" id="mv-pct-corretor" value="50">
                         </div>
                         <div class="col-span-2 space-y-2">
                             <div class="grid grid-cols-3 gap-3">
@@ -4857,8 +4852,8 @@ window.toggleSidebar = function() {
             const bruta = vgv * pctTotal / 100;
             const descontoNota = bruta * pctNota / 100;
             const liquida = bruta - descontoNota;
-            const corretor = liquida * pctCorretor / 100;
-            const gerente = liquida * pctGerente / 100;
+            const corretor = liquida / 2;               // corretor = metade da líquida
+            const gerente = liquida * pctGerente / 100; // gerente = % da líquida
             return { vgv, pctTotal, pctCorretor, pctGerente, pctNota, bruta, descontoNota, liquida, corretor, gerente };
         }
 
