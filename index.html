@@ -4734,18 +4734,57 @@ window.toggleSidebar = function() {
             }
         }
 
+        // Cancela todos os leads de um corretor, EXCETO os que estão em Ganhos (financeiro)
+        function cancelarLeadsDoCorretor(nome, motivo) {
+            const t = getTime();
+            const now = new Date().toISOString();
+            let count = 0;
+            DB.leads.forEach(l => {
+                if(l.broker !== nome) return;
+                if(l.pipeline === 'financeiro') return;   // mantém os Ganhos intactos
+                if(l.pipeline === 'cancelados') return;    // já cancelado
+                l.previousPipeline = l.pipeline;
+                l.previousStage = l.stageId;
+                l.pipeline = 'cancelados';
+                l.stageId = 'cancelado';
+                l.cancelReason = motivo;
+                l.canceledAt = now;
+                l.canceledBy = currentUser.name;
+                l.updatedAt = now;
+                l.updatedBy = currentUser.name;
+                l.timeline = l.timeline || [];
+                l.timeline.unshift(`[${t}] Lead cancelado automaticamente — ${motivo}`);
+                sincronizarPlanilha(l); // reflete na planilha, se já estava lá
+                count++;
+            });
+            if(count) saveLeadsDB();
+            return count;
+        }
+
         window.toggleUserStatus = function(userId) {
             const user = DB.users.find(u => u.id === userId);
             if(!user) return;
             if(!canEditUser(user)) { showToast('Sem permissão.', 'error'); return; }
             if(user.id === currentUser.id) { showToast('Você não pode alterar seu próprio status.', 'error'); return; }
-            
-            user.status = user.status === 'Ativo' ? 'Inativo' : 'Ativo';
+
+            const vaiDesativar = user.status === 'Ativo';
+            if(vaiDesativar) {
+                const qtd = DB.leads.filter(l => l.broker === user.name && l.pipeline !== 'financeiro' && l.pipeline !== 'cancelados').length;
+                if(qtd > 0 && !confirm(`Desativar ${user.name}?\n\n${qtd} lead(s) dele(a) irão para Cancelados (os que estão em Ganhos são mantidos).`)) return;
+            }
+
+            user.status = vaiDesativar ? 'Inativo' : 'Ativo';
             saveUsersDB();
+            let canceladosMsg = '';
+            if(vaiDesativar) {
+                const n = cancelarLeadsDoCorretor(user.name, `corretor ${user.name} desativado`);
+                if(n) canceladosMsg = ` ${n} lead(s) movidos para Cancelados.`;
+            }
             triggerAutoSaveUI();
             renderUsersTable();
-            showToast(`${user.name} agora está ${user.status}.`, 'info');
-            addNotification(`${user.name} ${user.status === 'Ativo' ? 'ativado' : 'desativado'}`, user.status === 'Ativo' ? 'success' : 'warning');
+            if(['leads','analise','financeiro','cancelados'].includes(currentView)) renderKanban(currentPipeline);
+            showToast(`${user.name} agora está ${user.status}.${canceladosMsg}`, 'info');
+            addNotification(`${user.name} ${user.status === 'Ativo' ? 'ativado' : 'desativado'}${canceladosMsg}`, user.status === 'Ativo' ? 'success' : 'warning');
         }
 
         window.deleteUser = function(userId) {
@@ -4753,22 +4792,23 @@ window.toggleSidebar = function() {
             if(!user) return;
             if(!canDeleteUser(user)) { showToast('Sem permissão para excluir este usuário.', 'error'); return; }
             
-            const myLeads = DB.leads.filter(l => l.broker === user.name).length;
-            const confirmMsg = myLeads > 0 
-                ? `Excluir ${user.name}?\n\nEste corretor possui ${myLeads} lead(s). Os leads serão preservados, mas ficarão sem corretor atribuído.`
-                : `Excluir ${user.name} permanentemente?`;
+            const aCancelar = DB.leads.filter(l => l.broker === user.name && l.pipeline !== 'financeiro' && l.pipeline !== 'cancelados').length;
+            const emGanhos = DB.leads.filter(l => l.broker === user.name && l.pipeline === 'financeiro').length;
+            const confirmMsg = `Excluir ${user.name}?\n\n${aCancelar} lead(s) irão para Cancelados.` +
+                (emGanhos > 0 ? `\n${emGanhos} lead(s) em Ganhos serão mantidos.` : '');
             if(!confirm(confirmMsg)) return;
-            
+
+            // Cancela os leads do corretor (exceto Ganhos) antes de remover o usuário
+            const n = cancelarLeadsDoCorretor(user.name, `corretor ${user.name} excluído`);
+
             DB.users = DB.users.filter(u => u.id !== userId);
-            // Limpar broker dos leads
-            DB.leads.forEach(l => { if(l.broker === user.name) l.broker = ''; });
             saveUsersDB();
-            saveLeadsDB();
             triggerAutoSaveUI();
             renderUsersTable();
             populateBrokerDropdowns();
-            showToast(`Usuário ${user.name} excluído.`, 'info');
-            addNotification(`Usuário ${user.name} foi removido do sistema`, 'warning');
+            if(['leads','analise','financeiro','cancelados'].includes(currentView)) renderKanban(currentPipeline);
+            showToast(`Usuário ${user.name} excluído.${n ? ' ' + n + ' lead(s) movidos para Cancelados.' : ''}`, 'info');
+            addNotification(`Usuário ${user.name} foi removido. ${n} lead(s) cancelados (Ganhos mantidos).`, 'warning');
         }
 
         // Event listeners para os botões de status (delegação)
