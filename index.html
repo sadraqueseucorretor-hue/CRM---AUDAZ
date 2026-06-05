@@ -4028,6 +4028,40 @@ window.toggleSidebar = function() {
             showToast('Imagem removida.', 'info');
         }
 
+        // Gera um favicon recortando as bordas transparentes (logo preenche o ícone)
+        function gerarFaviconRecortado(url) {
+            const im = new Image();
+            im.crossOrigin = 'anonymous';
+            im.onload = function() {
+                try {
+                    const w = im.naturalWidth, h = im.naturalHeight;
+                    if(!w || !h) return;
+                    const c = document.createElement('canvas'); c.width = w; c.height = h;
+                    const ctx = c.getContext('2d');
+                    ctx.drawImage(im, 0, 0);
+                    const data = ctx.getImageData(0, 0, w, h).data; // pode lançar se CORS bloquear
+                    let minX = w, minY = h, maxX = 0, maxY = 0, achou = false;
+                    for(let y = 0; y < h; y++) for(let x = 0; x < w; x++) {
+                        if(data[(y*w + x)*4 + 3] > 12) { achou = true;
+                            if(x < minX) minX = x; if(x > maxX) maxX = x;
+                            if(y < minY) minY = y; if(y > maxY) maxY = y;
+                        }
+                    }
+                    if(!achou) { minX = 0; minY = 0; maxX = w-1; maxY = h-1; }
+                    const cw = maxX - minX + 1, ch = maxY - minY + 1;
+                    const size = 64, margem = 2;
+                    const out = document.createElement('canvas'); out.width = size; out.height = size;
+                    const octx = out.getContext('2d');
+                    const escala = Math.min((size - margem*2)/cw, (size - margem*2)/ch);
+                    const dw = cw*escala, dh = ch*escala;
+                    octx.drawImage(c, minX, minY, cw, ch, (size-dw)/2, (size-dh)/2, dw, dh);
+                    const fav = document.getElementById('favicon');
+                    if(fav) fav.href = out.toDataURL('image/png');
+                } catch(e) { /* CORS ou outro — mantém o favicon padrão */ }
+            };
+            im.src = url;
+        }
+
         function loadSysLogo() {
             const { data } = _sb.storage.from('crm-files').getPublicUrl('system/logo.png');
             const url = data.publicUrl + '?t=' + Date.now();
@@ -4045,9 +4079,10 @@ window.toggleSidebar = function() {
                 if(img) { img.src = url; img.classList.remove('hidden'); }
                 if(empty) empty.classList.add('hidden');
 
-                // Atualiza o ícone da aba (favicon) com a logo
+                // Atualiza o ícone da aba (favicon) com a logo, recortando o espaço vazio
                 const fav = document.getElementById('favicon');
                 if(fav) fav.href = url;
+                gerarFaviconRecortado(url);
             };
             tester.onerror = function() {
                 const img = document.getElementById('logo-preview-img');
