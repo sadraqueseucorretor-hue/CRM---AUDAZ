@@ -1338,8 +1338,8 @@
                                 <div class="glass p-6 rounded-xl border border-slate-700/50">
                                     <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center"><i class="fa-solid fa-building mr-2 text-purple-400 text-lg"></i>Interesse</h4>
                                     <div class="space-y-5 text-sm">
-                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Construtora</label><select id="ld-construtora" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"><option value="">Selecione...</option></select></div>
-                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Empreendimento Alvo</label><select id="ld-project" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"><option value="">Selecione...</option></select></div>
+                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Construtora</label><input id="ld-construtora" list="dl-construtoras" autocomplete="off" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead" placeholder="Digite ou selecione..."><datalist id="dl-construtoras"></datalist></div>
+                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Empreendimento Alvo</label><input id="ld-project" list="dl-empreendimentos" autocomplete="off" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead" placeholder="Digite ou selecione..."><datalist id="dl-empreendimentos"></datalist></div>
                                         <div><label class="text-slate-500 text-xs font-semibold uppercase">Origem</label><select id="ld-origin" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"><option value="">Selecione...</option><option value="Instagram">Instagram</option><option value="Facebook">Facebook</option><option value="Google">Google Ads</option><option value="Indicação">Indicação</option><option value="Site">Site</option><option value="WhatsApp">WhatsApp</option></select></div>
                                     </div>
                                 </div>
@@ -2685,19 +2685,15 @@ window.toggleSidebar = function() {
 
         // Preenche os dropdowns de Construtora e Empreendimento a partir das listas do Diretor
         function populateListaDropdowns(lead) {
-            const fill = (selectId, items, currentValue) => {
-                const sel = document.getElementById(selectId);
-                if(!sel) return;
-                let opts = '<option value="">Selecione...</option>';
-                const lista = [...items];
-                // Garante que o valor atual do lead apareça, mesmo se não estiver mais na lista
-                if(currentValue && !lista.includes(currentValue)) lista.push(currentValue);
-                opts += lista.map(it => `<option value="${it}">${it}</option>`).join('');
-                sel.innerHTML = opts;
-                if(currentValue) sel.value = currentValue;
+            const fill = (inputId, datalistId, items, currentValue) => {
+                const input = document.getElementById(inputId);
+                const dl = document.getElementById(datalistId);
+                if(!dl) return;
+                dl.innerHTML = items.map(it => `<option value="${_escAttr(it)}"></option>`).join('');
+                if(input) input.value = currentValue || '';
             };
-            fill('ld-construtora', LISTAS.construtoras, lead?.construtora);
-            fill('ld-project', LISTAS.empreendimentos, lead?.project);
+            fill('ld-construtora', 'dl-construtoras', LISTAS.construtoras, lead?.construtora);
+            fill('ld-project', 'dl-empreendimentos', LISTAS.empreendimentos, lead?.project);
         }
 
         function populateBrokerDropdowns() {
