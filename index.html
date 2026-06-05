@@ -1656,7 +1656,7 @@
             USERS: 'audaz_users', LEADS: 'audaz_leads', SESSION: 'audaz_session',
             LOGGED_USER: 'audaz_logged_user', LAST_PAGE: 'audaz_last_page',
             NOTIFICATIONS: 'audaz_notifications', PIPELINES: 'audaz_pipelines', LISTAS: 'audaz_listas',
-            SHEETS: 'audaz_sheets_url', CONFIG: 'audaz_config'
+            SHEETS: 'audaz_sheets_url', CONFIG: 'audaz_config', SEEDED: 'audaz_seeded'
         };
 
         const PIPELINES_DEFAULT = {
@@ -1887,6 +1887,9 @@
                 showToast('Excluindo leads...', 'info');
                 const { error } = await _sb.from('leads').delete().neq('id', '___never___');
                 if(error) throw error;
+                // Remove o blob antigo e marca como inicializado, para os leads NÃO voltarem ao atualizar
+                await dbDelete(DB_KEYS.LEADS);
+                await dbSet(DB_KEYS.SEEDED, JSON.stringify(true));
                 DB.leads = [];
                 _leadsSnapshot = {};
                 updateNavCounters();
@@ -1984,11 +1987,15 @@
                 if(u.createdAt === undefined) u.createdAt = getDateStr();
             });
 
+            // Verifica se o sistema já foi inicializado alguma vez (evita re-semear/re-migrar leads apagados)
+            let jaInicializado = false;
+            try { const s = await dbGet(DB_KEYS.SEEDED); jaInicializado = !!(s && JSON.parse(s)); } catch(e) {}
+
             // Carrega leads da nova tabela "leads" (1 linha por lead)
             let loadedLeads = await loadLeadsFromDB();
 
-            // Migração automática do blob antigo, se existir
-            if(loadedLeads !== null && loadedLeads.length === 0) {
+            // Migração do blob antigo: SÓ na primeira vez (se nunca foi inicializado)
+            if(loadedLeads !== null && loadedLeads.length === 0 && !jaInicializado) {
                 const oldBlob = await dbGet(DB_KEYS.LEADS);
                 if(oldBlob) {
                     const oldLeads = JSON.parse(oldBlob);
@@ -2000,7 +2007,8 @@
 
             if(loadedLeads && loadedLeads.length > 0) {
                 DB.leads = loadedLeads;
-            } else {
+            } else if(!jaInicializado) {
+                // Primeira vez: cria os leads de demonstração
                 const t = getTime(); const d = getDateStr();
                 DB.leads = [
                     { id: generateId(), name: 'Rodrigo Alves', phone: '(11) 98765-4321', broker: 'Carlos', origin: 'Instagram', income: 6500, pipeline: 'leads', stageId: 'hot', order: 0, temp: 'Hot', tags: [], docs: ['rg','cpf'], files: [], timeline: [`[${t}] Lead criado no sistema`], date: d, opObs: '', email: 'rodrigo@email.com' },
@@ -2010,7 +2018,13 @@
                     { id: generateId(), name: 'Pedro Santos', phone: '(11) 94444-3333', broker: 'Thaís', origin: 'Site', income: 15000, pipeline: 'financeiro', stageId: 'venda-gerada', order: 0, temp: 'Hot', tags: [], docs: DOC_CHECKLIST_ITEMS.map(d=>d.id), files: [], timeline: [`[${t}] Lead criado no sistema`], date: d, opObs: '', propertyValue: 450000, vgv: 520000 }
                 ];
                 await _sb.from('leads').upsert(DB.leads.map(l => ({ id: l.id, data: l, updated_at: new Date().toISOString() })), { onConflict: 'id' });
+            } else {
+                // Já inicializado e sem leads = ficou vazio de propósito
+                DB.leads = [];
             }
+
+            // Marca como inicializado (não re-semeia/re-migra nas próximas vezes)
+            if(!jaInicializado) { try { await dbSet(DB_KEYS.SEEDED, JSON.stringify(true)); } catch(e) {} }
 
             // Snapshot inicial dos leads
             _leadsSnapshot = _rebuildSnapshot(DB.leads);
