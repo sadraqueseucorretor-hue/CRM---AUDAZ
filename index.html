@@ -600,6 +600,7 @@
                                     <button onclick="document.getElementById('file-import-backup').click()" class="bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold transition-colors flex items-center gap-2"><i class="fa-solid fa-upload"></i> Restaurar Backup</button>
                                     <button onclick="exportLeadsCSV()" class="bg-emerald-700 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold transition-colors flex items-center gap-2"><i class="fa-solid fa-file-csv"></i> Exportar Leads CSV</button>
                                     <button onclick="ressincronizarPlanilha()" class="bg-green-700 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-bold transition-colors flex items-center gap-2"><i class="fa-solid fa-rotate"></i> Ressincronizar Planilha</button>
+                                    <button onclick="limparTodosLeads()" class="bg-red-700 hover:bg-red-600 text-white px-6 py-3 rounded-xl font-bold transition-colors flex items-center gap-2"><i class="fa-solid fa-trash-can"></i> Excluir Todos os Leads</button>
                                     <input type="file" id="file-import-backup" accept=".json" class="hidden" onchange="importBackupJSON(event)">
                                 </div>
                                 <div class="border-t border-slate-700/50 pt-6">
@@ -1871,6 +1872,30 @@
                 showToast('Teste enviado! Confira se apareceu uma linha "TESTE DE CONEXÃO" na planilha (pode apagar depois).', 'success');
             } catch(e) {
                 showToast('Não foi possível enviar o teste. Verifique o link.', 'error');
+            }
+        }
+
+        // Exclui TODOS os leads (mantém usuários). Dupla confirmação.
+        window.limparTodosLeads = async function() {
+            if(currentUser.role !== 'Diretor') { showToast('Apenas o Diretor pode fazer isso.', 'error'); return; }
+            const total = DB.leads.length;
+            if(total === 0) { showToast('Não há leads para excluir.', 'info'); return; }
+            if(!confirm(`⚠️ ATENÇÃO: isso vai EXCLUIR PERMANENTEMENTE os ${total} leads do sistema.\n\nOs usuários são mantidos. Esta ação NÃO pode ser desfeita.\n\nDeseja continuar?`)) return;
+            const txt = prompt('Para confirmar, digite EXCLUIR (em maiúsculas):');
+            if(txt !== 'EXCLUIR') { showToast('Cancelado. Nada foi excluído.', 'info'); return; }
+            try {
+                showToast('Excluindo leads...', 'info');
+                const { error } = await _sb.from('leads').delete().neq('id', '___never___');
+                if(error) throw error;
+                DB.leads = [];
+                _leadsSnapshot = {};
+                updateNavCounters();
+                if(['leads','analise','financeiro','cancelados','distribuir'].includes(currentView)) navigate('dashboard');
+                renderDashboard();
+                showToast(`${total} leads excluídos com sucesso.`, 'success');
+                addNotification(`${total} leads foram excluídos por ${currentUser.name}`, 'warning');
+            } catch(e) {
+                showToast('Erro ao excluir: ' + e.message, 'error');
             }
         }
 
