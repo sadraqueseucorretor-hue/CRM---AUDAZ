@@ -1272,13 +1272,13 @@
     <!-- MODAL: DETALHES DO LEAD -->
     <!-- ============================================================== -->
     <div id="modal-lead-details" class="fixed inset-0 bg-darker/95 backdrop-blur-md z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
-        <div class="bg-panel border border-slate-700 shadow-2xl w-full max-w-[1150px] h-[88vh] flex flex-col rounded-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="modal-lead-details-content">
-            
-            <div class="px-8 py-5 border-b border-slate-700 flex justify-between items-center bg-slate-900/80">
-                <div class="flex items-center gap-6 flex-1 min-w-0">
-                    <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg border-2 border-slate-700 flex-shrink-0" id="ld-avatar">JS</div>
+        <div class="bg-panel border border-slate-700 shadow-2xl w-full max-w-[1280px] h-[90vh] flex flex-col rounded-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="modal-lead-details-content">
+
+            <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center gap-4 bg-slate-900/80">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-lg font-bold text-white shadow-lg border-2 border-slate-700 flex-shrink-0" id="ld-avatar">JS</div>
                     <div class="flex-1 min-w-0">
-                        <h2 class="text-3xl font-bold text-white flex items-center gap-3 flex-wrap" id="ld-name">Nome <span id="ld-temp" class="text-xs px-2.5 py-1 rounded-md font-bold uppercase tracking-wide">Hot</span></h2>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2 flex-wrap" id="ld-name">Nome <span id="ld-temp" class="text-xs px-2.5 py-1 rounded-md font-bold uppercase tracking-wide">Hot</span></h2>
                         <div class="flex items-center gap-4 mt-3 flex-wrap">
                             <!-- Etapa editável compacta -->
                             <div class="flex items-center gap-2">
@@ -1300,18 +1300,17 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex gap-3 items-center flex-shrink-0">
+                <div class="flex gap-2 items-center flex-shrink-0">
                     <div class="flex items-center gap-1 mr-1">
-                        <button onclick="navegarLead('prev')" id="ld-nav-prev" title="Lead anterior da coluna" class="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-primary/30 text-slate-300 hover:text-white transition-colors"><i class="fa-solid fa-chevron-left"></i></button>
-                        <span id="ld-nav-pos" class="text-[11px] text-slate-500 font-bold min-w-[42px] text-center"></span>
-                        <button onclick="navegarLead('next')" id="ld-nav-next" title="Próximo lead da coluna" class="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-primary/30 text-slate-300 hover:text-white transition-colors"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button onclick="navegarLead('prev')" id="ld-nav-prev" title="Lead anterior da coluna" class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-primary/30 text-slate-300 hover:text-white transition-colors"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                        <span id="ld-nav-pos" class="text-[10px] text-slate-500 font-bold min-w-[34px] text-center"></span>
+                        <button onclick="navegarLead('next')" id="ld-nav-next" title="Próximo lead da coluna" class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-primary/30 text-slate-300 hover:text-white transition-colors"><i class="fa-solid fa-chevron-right text-xs"></i></button>
                     </div>
-                    <span class="save-indicator mt-4" id="save-ind-lead" style="position:relative; top:0; right:0;"><i class="fa-solid fa-check"></i> Salvo</span>
-                    <button id="ld-move-btn" onclick="openMoveClientModal()" class="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-5 py-3 rounded-lg text-sm font-bold transition-all shadow-lg shadow-purple-500/30 flex items-center gap-2"><i class="fa-solid fa-arrow-right-arrow-left"></i> Mover Cliente</button>
-                    <button id="ld-whatsapp-btn" onclick="openWhatsApp()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-emerald-600/20 flex items-center gap-2"><i class="fa-brands fa-whatsapp text-lg"></i> Conversar</button>
-                    <button id="ld-cancel-btn" onclick="openCancelLeadModal()" class="bg-red-600/20 hover:bg-red-600/40 text-red-300 px-4 py-3 rounded-lg transition-colors border border-red-600/30 flex items-center gap-2" data-tooltip="Cancelar Lead"><i class="fa-solid fa-ban"></i> <span class="hidden lg:inline text-xs font-bold">Cancelar</span></button>
-                    <button onclick="deleteLead()" id="ld-delete-btn" class="bg-red-700/20 hover:bg-red-700/40 text-red-400 px-3 py-3 rounded-lg transition-colors border border-red-700/30 hidden" data-tooltip="Excluir permanentemente (Diretor)"><i class="fa-solid fa-trash"></i></button>
-                    <button onclick="closeModal('modal-lead-details')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-5 py-3 rounded-lg transition-colors"><i class="fa-solid fa-times text-lg"></i></button>
+                    <button id="ld-move-btn" onclick="openMoveClientModal()" class="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg shadow-purple-500/30 flex items-center gap-2"><i class="fa-solid fa-arrow-right-arrow-left"></i> <span class="hidden xl:inline">Mover Cliente</span></button>
+                    <button id="ld-whatsapp-btn" onclick="openWhatsApp()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-emerald-600/20 flex items-center gap-2"><i class="fa-brands fa-whatsapp text-lg"></i> <span class="hidden xl:inline">Conversar</span></button>
+                    <button id="ld-cancel-btn" onclick="openCancelLeadModal()" class="bg-red-600/20 hover:bg-red-600/40 text-red-300 px-3 py-2.5 rounded-lg transition-colors border border-red-600/30 flex items-center gap-2" data-tooltip="Cancelar Lead"><i class="fa-solid fa-ban"></i> <span class="hidden xl:inline text-xs font-bold">Cancelar</span></button>
+                    <button onclick="deleteLead()" id="ld-delete-btn" class="bg-red-700/20 hover:bg-red-700/40 text-red-400 px-3 py-2.5 rounded-lg transition-colors border border-red-700/30 hidden" data-tooltip="Excluir permanentemente (Diretor)"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="closeModal('modal-lead-details')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-lg transition-colors"><i class="fa-solid fa-times text-lg"></i></button>
                 </div>
             </div>
 
