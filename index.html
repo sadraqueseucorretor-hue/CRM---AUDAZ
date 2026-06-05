@@ -3144,6 +3144,7 @@ window.toggleSidebar = function() {
                 document.querySelectorAll('.sortable-col').forEach(col => {
                     new Sortable(col, {
                         group: 'shared', animation: 150, ghostClass: 'sortable-ghost', dragClass: 'sortable-drag',
+                        draggable: '.kanban-card', // só os cards arrastam (ignora o placeholder "Vazio")
                         delay: 50, delayOnTouchOnly: true,
                         onEnd: function (evt) {
                             const leadId = evt.item.dataset.id; 
