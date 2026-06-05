@@ -1272,7 +1272,7 @@
     <!-- MODAL: DETALHES DO LEAD -->
     <!-- ============================================================== -->
     <div id="modal-lead-details" class="fixed inset-0 bg-darker/95 backdrop-blur-md z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
-        <div class="bg-panel border border-slate-700 shadow-2xl w-full max-w-[1150px] h-[88vh] flex flex-col rounded-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="modal-lead-details-content">
+        <div class="bg-panel border border-slate-700 shadow-2xl w-full max-w-[1500px] h-[95vh] flex flex-col rounded-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="modal-lead-details-content">
             
             <div class="px-8 py-5 border-b border-slate-700 flex justify-between items-center bg-slate-900/80">
                 <div class="flex items-center gap-6 flex-1 min-w-0">
@@ -1301,11 +1301,6 @@
                     </div>
                 </div>
                 <div class="flex gap-3 items-center flex-shrink-0">
-                    <div class="flex items-center gap-1 mr-1">
-                        <button onclick="navegarLead('prev')" id="ld-nav-prev" title="Lead anterior da coluna" class="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-primary/30 text-slate-300 hover:text-white transition-colors"><i class="fa-solid fa-chevron-left"></i></button>
-                        <span id="ld-nav-pos" class="text-[11px] text-slate-500 font-bold min-w-[42px] text-center"></span>
-                        <button onclick="navegarLead('next')" id="ld-nav-next" title="Próximo lead da coluna" class="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-primary/30 text-slate-300 hover:text-white transition-colors"><i class="fa-solid fa-chevron-right"></i></button>
-                    </div>
                     <span class="save-indicator mt-4" id="save-ind-lead" style="position:relative; top:0; right:0;"><i class="fa-solid fa-check"></i> Salvo</span>
                     <button id="ld-move-btn" onclick="openMoveClientModal()" class="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-5 py-3 rounded-lg text-sm font-bold transition-all shadow-lg shadow-purple-500/30 flex items-center gap-2"><i class="fa-solid fa-arrow-right-arrow-left"></i> Mover Cliente</button>
                     <button id="ld-whatsapp-btn" onclick="openWhatsApp()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-emerald-600/20 flex items-center gap-2"><i class="fa-brands fa-whatsapp text-lg"></i> Conversar</button>
@@ -3541,47 +3536,6 @@ window.toggleSidebar = function() {
             document.getElementById(`tab-${tabName}`).classList.add('active');
         }
 
-        // Retorna os leads da mesma coluna (mesmo pipeline + etapa) que o lead, na ordem do kanban
-        function leadsNaColuna(lead) {
-            if(!lead) return [];
-            if(lead.pipeline === 'cancelados') {
-                return DB.leads.filter(l => l.pipeline === 'cancelados');
-            }
-            let base = getVisibleLeads().filter(l => l.pipeline === lead.pipeline && l.stageId === lead.stageId);
-            // aplica os mesmos filtros do kanban, se a função existir
-            try { base = applyKanbanFilters(base); } catch(e) {}
-            return base.sort((a,b) => (a.order||0) - (b.order||0));
-        }
-
-        // Navega para o lead anterior/próximo da mesma coluna
-        window.navegarLead = function(dir) {
-            const id = document.getElementById('ld-id').value;
-            const atual = DB.leads.find(l => l.id === id);
-            if(!atual) return;
-            const col = leadsNaColuna(atual);
-            const idx = col.findIndex(l => l.id === id);
-            if(idx === -1) return;
-            const novoIdx = dir === 'next' ? idx + 1 : idx - 1;
-            if(novoIdx < 0 || novoIdx >= col.length) {
-                showToast(dir === 'next' ? 'Último lead da coluna.' : 'Primeiro lead da coluna.', 'info');
-                return;
-            }
-            openLeadDetails(col[novoIdx].id);
-        }
-
-        // Atualiza os botões de navegação (posição X/Y e habilita/desabilita)
-        function atualizarNavLead(lead) {
-            const col = leadsNaColuna(lead);
-            const idx = col.findIndex(l => l.id === lead.id);
-            const pos = document.getElementById('ld-nav-pos');
-            const prev = document.getElementById('ld-nav-prev');
-            const next = document.getElementById('ld-nav-next');
-            if(pos) pos.textContent = col.length > 1 ? `${idx+1}/${col.length}` : '';
-            const setDis = (el, dis) => { if(!el) return; el.disabled = dis; el.style.opacity = dis ? '0.35' : '1'; el.style.pointerEvents = dis ? 'none' : 'auto'; };
-            setDis(prev, idx <= 0);
-            setDis(next, idx >= col.length - 1);
-        }
-
         window.openLeadDetails = function(id) {
             const lead = DB.leads.find(l => l.id === id); 
             if(!lead) return;
@@ -3748,13 +3702,11 @@ window.toggleSidebar = function() {
                 else deleteBtn.classList.add('hidden');
             }
             
-            atualizarNavLead(lead); // setas de navegação entre leads da coluna
-
             const modal = document.getElementById('modal-lead-details');
             modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                document.getElementById('modal-lead-details-content').classList.remove('scale-95');
+            setTimeout(() => { 
+                modal.classList.remove('opacity-0'); 
+                document.getElementById('modal-lead-details-content').classList.remove('scale-95'); 
             }, 10);
         }
 
