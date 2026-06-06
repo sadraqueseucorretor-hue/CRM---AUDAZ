@@ -710,7 +710,7 @@
   for (var i = 1; i < ids.length; i++) {
     if (String(ids[i][0]) === String(d.id)) { linha = i + 1; break; }
   }
-  var row = [d.id, d.data, d.mes, d.corretor, d.equipe, d.cliente, d.construtora, d.empreendimento, d.dataAprovacao, d.mesAprovacao, d.analise, d.dataGanho, d.mesGanho, d.ganho, d.situacao, d.vgv, d.comissaoTotal, d.percentualNota, d.valorDescontoNota, d.comissaoLiquida, d.comissaoCorretor, d.comissaoGerente, d.recebidoCorretor, d.recebidoGerente, d.totalRecebido, d.faltaReceber, d.mesRecebimento, d.detalheRecebimentos, d.temBonus, d.valorBonus];
+  var row = [d.id, d.data, d.mes, d.corretor, d.equipe, d.cliente, d.construtora, d.empreendimento, d.dataAprovacao, d.mesAprovacao, d.analise, d.dataGanho, d.mesGanho, d.ganho, d.situacao, d.vgv, d.comissaoTotal, d.percentualNota, d.valorDescontoNota, d.comissaoLiquida, d.comissaoCorretor, d.comissaoGerente, d.recebidoCorretor, d.recebidoGerente, d.totalRecebido, d.faltaReceber, d.mesRecebimento, d.detalheRecebimentos, d.temBonus, d.bonusBeneficiario, d.valorBonus, d.bonusPctNota, d.bonusLiquido, d.bonusRecebido, d.bonusFalta];
   if (linha === -1) { sheet.appendRow(row); linha = sheet.getLastRow(); }
   else { sheet.getRange(linha, 1, 1, row.length).setValues([row]); }
   var sit = String(d.situacao || "");
@@ -721,7 +721,8 @@
   sheet.getRange(linha, 1, 1, row.length).setBackground(cor);
   sheet.getRange(linha, 16, 1, 2).setNumberFormat("R$ #,##0.00");
   sheet.getRange(linha, 19, 1, 8).setNumberFormat("R$ #,##0.00");
-  sheet.getRange(linha, 30, 1, 1).setNumberFormat("R$ #,##0.00");
+  sheet.getRange(linha, 31, 1, 1).setNumberFormat("R$ #,##0.00");
+  sheet.getRange(linha, 33, 1, 3).setNumberFormat("R$ #,##0.00");
   return ContentService.createTextOutput(JSON.stringify({ok:true}));
 }</textarea>
                                         </div>
@@ -1412,17 +1413,51 @@
                                     </div>
 
                                     <!-- BÔNUS -->
-                                    <div class="mt-5 grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label class="text-slate-500 text-xs font-semibold uppercase">Tem Bônus?</label>
-                                            <select id="ld-temBonus" onchange="toggleBonus()" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead text-sm">
+                                    <div class="mt-5 pt-5 border-t border-emerald-500/20">
+                                        <div class="flex items-center gap-3">
+                                            <label class="text-slate-400 text-xs font-bold uppercase tracking-widest"><i class="fa-solid fa-gift mr-1 text-amber-400"></i> Tem Bônus?</label>
+                                            <select id="ld-temBonus" onchange="toggleBonus()" class="px-4 py-2 rounded-md auto-save-lead text-sm bg-slate-900 border border-slate-700">
                                                 <option value="Não">Não</option>
                                                 <option value="Sim">Sim</option>
                                             </select>
                                         </div>
-                                        <div id="ld-bonus-valor-wrap" class="hidden">
-                                            <label class="text-slate-500 text-xs font-semibold uppercase">Valor do Bônus</label>
-                                            <input id="ld-valorBonus" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead currency-mask text-sm" placeholder="R$ 0,00">
+
+                                        <div id="ld-bonus-panel" class="hidden mt-4 p-4 rounded-xl bg-amber-500/5 border border-amber-500/30 space-y-4">
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label class="text-slate-500 text-xs font-semibold uppercase">Beneficiário</label>
+                                                    <select id="ld-bonusBeneficiario" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead text-sm bg-slate-900 border border-slate-700">
+                                                        <option value="Corretor">Corretor</option>
+                                                        <option value="Gerente">Gerente</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="text-slate-500 text-xs font-semibold uppercase">Valor Total do Bônus</label>
+                                                    <input id="ld-valorBonus" oninput="recalcBonus()" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead currency-mask text-sm" placeholder="R$ 0,00">
+                                                </div>
+                                                <div>
+                                                    <label class="text-slate-500 text-xs font-semibold uppercase">% Nota do Bônus</label>
+                                                    <input type="number" id="ld-bonusPctNota" oninput="recalcBonus()" min="0" max="100" step="0.1" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead text-sm" placeholder="Ex: 15">
+                                                </div>
+                                                <div>
+                                                    <label class="text-slate-500 text-xs font-semibold uppercase">Recebido do Bônus</label>
+                                                    <input id="ld-bonusRecebido" oninput="recalcBonus()" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead currency-mask text-sm" placeholder="R$ 0,00">
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-3 gap-3">
+                                                <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
+                                                    <p class="text-[10px] text-amber-400 uppercase font-bold tracking-wider">Desconto Nota</p>
+                                                    <p id="ld-bonus-desconto-display" class="text-amber-300 font-bold text-sm">R$ 0,00</p>
+                                                </div>
+                                                <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
+                                                    <p class="text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Bônus Líquido</p>
+                                                    <p id="ld-bonus-liquido-display" class="text-emerald-300 font-bold text-sm">R$ 0,00</p>
+                                                </div>
+                                                <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
+                                                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Falta Receber</p>
+                                                    <p id="ld-bonus-falta-display" class="text-slate-200 font-bold text-sm">R$ 0,00</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1847,6 +1882,14 @@
             const ultimoRec = recs.length ? recs[recs.length-1] : null;
             const mesRec = ultimoRec ? mesRefDeDataBR(ultimoRec.data) : '';
             const detalheRec = recs.map(r => `${r.tipo} ${formatCurrency(r.valor)} (${r.data||''})`).join('; ');
+            // Bônus
+            const temBonus = ehFin && lead.temBonus === 'Sim';
+            const bonusTotal = temBonus ? (lead.valorBonus || 0) : 0;
+            const bonusPctNota = temBonus ? (lead.bonusPctNota || 0) : 0;
+            const bonusDesconto = bonusTotal * bonusPctNota / 100;
+            const bonusLiquido = bonusTotal - bonusDesconto;
+            const bonusRecebido = temBonus ? (lead.bonusRecebido || 0) : 0;
+            const bonusFalta = Math.max(0, bonusLiquido - bonusRecebido);
             try {
                 const broker = DB.users.find(u => u.name === lead.broker);
                 const agora = new Date();
@@ -1884,7 +1927,12 @@
                         mesRecebimento: mesRec,
                         detalheRecebimentos: detalheRec,
                         temBonus: ehFin ? (lead.temBonus || 'Não') : '',
-                        valorBonus: (ehFin && lead.temBonus === 'Sim') ? (lead.valorBonus || 0) : ''
+                        bonusBeneficiario: temBonus ? (lead.bonusBeneficiario || 'Corretor') : '',
+                        valorBonus: temBonus ? bonusTotal : '',
+                        bonusPctNota: temBonus ? bonusPctNota : '',
+                        bonusLiquido: temBonus ? bonusLiquido : '',
+                        bonusRecebido: temBonus ? bonusRecebido : '',
+                        bonusFalta: temBonus ? bonusFalta : ''
                     })
                 });
                 if(tracked) lead.naPlanilha = true;
@@ -3363,14 +3411,14 @@ window.toggleSidebar = function() {
             if(!lead) return;
 
             // Campos monetários: converter R$ mascarado para número
-            const currencyFields = { vgv: 'ld-vgv', commissionValue: 'ld-commission-value', propertyValue: 'ld-property-value', valorBonus: 'ld-valorBonus' };
+            const currencyFields = { vgv: 'ld-vgv', commissionValue: 'ld-commission-value', propertyValue: 'ld-property-value', valorBonus: 'ld-valorBonus', bonusRecebido: 'ld-bonusRecebido' };
             Object.entries(currencyFields).forEach(([field, elId]) => {
                 const el = document.getElementById(elId);
                 if(el && !el.disabled) lead[field] = parseCurrency(el.value);
             });
 
             // Campos textuais
-            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao','temBonus'].forEach(f => {
+            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao','temBonus','bonusBeneficiario','bonusPctNota'].forEach(f => {
                 const el = document.getElementById(`ld-${f}`);
                 if(el && !el.disabled) lead[f] = el.value;
             });
@@ -3714,13 +3762,27 @@ window.toggleSidebar = function() {
             }
         }
 
-        // Mostra/esconde o campo de valor do bônus conforme Sim/Não
+        // Mostra/esconde o painel de bônus conforme Sim/Não
         window.toggleBonus = function() {
             const sel = document.getElementById('ld-temBonus');
-            const wrap = document.getElementById('ld-bonus-valor-wrap');
-            if(!sel || !wrap) return;
-            if(sel.value === 'Sim') wrap.classList.remove('hidden');
-            else wrap.classList.add('hidden');
+            const panel = document.getElementById('ld-bonus-panel');
+            if(!sel || !panel) return;
+            if(sel.value === 'Sim') { panel.classList.remove('hidden'); recalcBonus(); }
+            else panel.classList.add('hidden');
+        }
+
+        // Recalcula desconto/líquido/falta do bônus
+        window.recalcBonus = function() {
+            const total = parseCurrency(document.getElementById('ld-valorBonus')?.value) || 0;
+            const pctNota = parseFloat(document.getElementById('ld-bonusPctNota')?.value) || 0;
+            const recebido = parseCurrency(document.getElementById('ld-bonusRecebido')?.value) || 0;
+            const desconto = total * pctNota / 100;
+            const liquido = total - desconto;
+            const falta = Math.max(0, liquido - recebido);
+            const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = formatCurrency(v); };
+            set('ld-bonus-desconto-display', desconto);
+            set('ld-bonus-liquido-display', liquido);
+            set('ld-bonus-falta-display', falta);
         }
 
         window.addRecebimento = function() {
@@ -3801,7 +3863,7 @@ window.toggleSidebar = function() {
                 else obsBox.classList.add('hidden');
             }
 
-            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao','temBonus'].forEach(f => {
+            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao','temBonus','bonusBeneficiario','bonusPctNota'].forEach(f => {
                 const el = document.getElementById(`ld-${f}`);
                 if(el) el.value = lead[f] || '';
             });
@@ -3814,7 +3876,11 @@ window.toggleSidebar = function() {
             if(commEl) commEl.value = formatCurrencyInput(lead.commissionValue || 0);
             const bonusEl = document.getElementById('ld-valorBonus');
             if(bonusEl) bonusEl.value = formatCurrencyInput(lead.valorBonus || 0);
-            toggleBonus(); // mostra/esconde o campo de valor conforme Sim/Não
+            const bonusRecEl = document.getElementById('ld-bonusRecebido');
+            if(bonusRecEl) bonusRecEl.value = formatCurrencyInput(lead.bonusRecebido || 0);
+            const bonusNotaEl = document.getElementById('ld-bonusPctNota');
+            if(bonusNotaEl) bonusNotaEl.value = lead.bonusPctNota != null ? lead.bonusPctNota : '';
+            toggleBonus(); // mostra/esconde o painel de bônus e recalcula
             const tempEl = document.getElementById('ld-temp-select');
             if(tempEl) tempEl.value = lead.temp || 'Novo';
 
