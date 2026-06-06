@@ -1384,9 +1384,35 @@
                                     <h4 class="text-xs font-bold text-emerald-300 uppercase tracking-widest mb-6 flex items-center"><i class="fa-solid fa-sack-dollar mr-2 text-emerald-400 text-lg"></i>Dados da Venda</h4>
                                     <div class="space-y-5 text-sm">
                                         <div><label class="text-slate-500 text-xs font-semibold uppercase">VGV</label><input type="text" id="ld-vgv" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead currency-mask" placeholder="R$ 0,00"></div>
-                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Comissão</label><input type="text" id="ld-commission-value" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead currency-mask" placeholder="R$ 0,00"></div>
-                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Valor do Imóvel</label><input type="text" id="ld-property-value" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead currency-mask" placeholder="R$ 0,00"></div>
+                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Comissão Total (Bruta)</label><input type="text" id="ld-commission-value" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead currency-mask" placeholder="R$ 0,00"></div>
+                                        <input type="hidden" id="ld-property-value" value="">
                                         <div id="ld-sale-info" class="text-xs text-slate-500 p-3 bg-slate-800/40 rounded-lg border border-slate-700/50"></div>
+                                    </div>
+
+                                    <!-- CONTROLE DE COMISSÃO -->
+                                    <div class="mt-6 pt-5 border-t border-emerald-500/20">
+                                        <h5 class="text-xs font-bold text-emerald-300 uppercase tracking-widest mb-4 flex items-center"><i class="fa-solid fa-hand-holding-dollar mr-2"></i> Controle de Comissão</h5>
+                                        <div id="ld-comissao-resumo" class="grid grid-cols-2 gap-3 mb-4"></div>
+
+                                        <div class="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3">
+                                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Registrar recebimento</p>
+                                            <div class="flex flex-wrap gap-2 items-end">
+                                                <select id="ld-receb-tipo" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
+                                                    <option value="Corretor">Corretor</option>
+                                                    <option value="Gerente">Gerente</option>
+                                                </select>
+                                                <input id="ld-receb-valor" class="currency-mask bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white w-36" placeholder="R$ 0,00">
+                                                <input type="date" id="ld-receb-data" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
+                                                <button onclick="addRecebimento()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1"><i class="fa-solid fa-plus"></i> Add</button>
+                                            </div>
+                                        </div>
+                                        <div id="ld-receb-lista" class="mt-3 space-y-2"></div>
+                                    </div>
+
+                                    <!-- SITUAÇÃO / OBSERVAÇÕES DA VENDA -->
+                                    <div class="mt-5">
+                                        <label class="text-slate-500 text-xs font-semibold uppercase">Situação / Observações da Venda</label>
+                                        <textarea id="ld-vendaSituacao" rows="2" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead text-sm resize-none" placeholder="Ex: venda com bônus corretor, entrada parcelada, condições especiais..."></textarea>
                                     </div>
                                 </div>
 
@@ -3300,7 +3326,7 @@ window.toggleSidebar = function() {
             });
 
             // Campos textuais
-            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin'].forEach(f => {
+            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao'].forEach(f => {
                 const el = document.getElementById(`ld-${f}`);
                 if(el && !el.disabled) lead[f] = el.value;
             });
@@ -3602,8 +3628,82 @@ window.toggleSidebar = function() {
             setDis(next, idx >= col.length - 1);
         }
 
+        // ====================================================================
+        // CONTROLE DE COMISSÃO (recebimentos do Ganho)
+        // ====================================================================
+        function renderControleComissao(lead) {
+            const resumo = document.getElementById('ld-comissao-resumo');
+            const lista = document.getElementById('ld-receb-lista');
+            if(!resumo || !lista) return;
+            lead.recebimentos = lead.recebimentos || [];
+
+            const totalCorretor = lead.commissionBroker || 0;
+            const totalGerente = lead.comissaoGerente || 0;
+            const recCorretor = lead.recebimentos.filter(r => r.tipo === 'Corretor').reduce((s,r) => s + (r.valor||0), 0);
+            const recGerente = lead.recebimentos.filter(r => r.tipo === 'Gerente').reduce((s,r) => s + (r.valor||0), 0);
+
+            const card = (titulo, total, recebido, cor) => {
+                const falta = Math.max(0, total - recebido);
+                const pct = total > 0 ? Math.min(100, Math.round(recebido/total*100)) : 0;
+                return `<div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3">
+                    <p class="text-[11px] font-bold ${cor} uppercase tracking-wider mb-1">${titulo}</p>
+                    <p class="text-xs text-slate-400">Total: <b class="text-white">${formatCurrency(total)}</b></p>
+                    <p class="text-xs text-slate-400">Recebido: <b class="text-emerald-400">${formatCurrency(recebido)}</b></p>
+                    <p class="text-xs text-slate-400">Falta: <b class="text-amber-400">${formatCurrency(falta)}</b></p>
+                    <div class="lead-progress-track mt-2"><div class="lead-progress-fill" style="width:${pct}%; background-color:#10b981"></div></div>
+                </div>`;
+            };
+            resumo.innerHTML = card('Corretor', totalCorretor, recCorretor, 'text-blue-300') + card('Gerente', totalGerente, recGerente, 'text-purple-300');
+
+            if(lead.recebimentos.length === 0) {
+                lista.innerHTML = '<p class="text-xs text-slate-500 italic py-1">Nenhum recebimento registrado.</p>';
+            } else {
+                lista.innerHTML = lead.recebimentos.slice().reverse().map(r => `
+                    <div class="flex items-center justify-between bg-slate-800/40 border border-slate-700/40 rounded-lg px-3 py-2">
+                        <div class="text-sm">
+                            <span class="font-bold ${r.tipo === 'Corretor' ? 'text-blue-300' : 'text-purple-300'}">${r.tipo}</span>
+                            <span class="text-emerald-400 font-bold ml-2">${formatCurrency(r.valor)}</span>
+                            <span class="text-slate-500 text-xs ml-2">${r.data || ''}</span>
+                        </div>
+                        <button onclick="removeRecebimento('${r.id}')" class="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1.5 rounded"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>`).join('');
+            }
+        }
+
+        window.addRecebimento = function() {
+            const id = document.getElementById('ld-id').value;
+            const lead = DB.leads.find(l => l.id === id);
+            if(!lead) return;
+            const tipo = document.getElementById('ld-receb-tipo').value;
+            const valor = parseCurrency(document.getElementById('ld-receb-valor').value);
+            const data = document.getElementById('ld-receb-data').value;
+            if(!valor || valor <= 0) { showToast('Informe o valor recebido.', 'error'); return; }
+            lead.recebimentos = lead.recebimentos || [];
+            const dataFmt = data ? data.split('-').reverse().join('/') : getDateStr();
+            lead.recebimentos.push({ id: generateId(), tipo, valor, data: dataFmt, registradoPor: currentUser.name });
+            lead.timeline = lead.timeline || [];
+            lead.timeline.unshift(`[${getTime()}] Recebimento de comissão (${tipo}): ${formatCurrency(valor)}`);
+            saveLeadsDB();
+            document.getElementById('ld-receb-valor').value = '';
+            document.getElementById('ld-receb-data').value = '';
+            renderControleComissao(lead);
+            renderTimeline(lead);
+            showToast('Recebimento registrado!', 'success');
+        }
+
+        window.removeRecebimento = function(rid) {
+            const id = document.getElementById('ld-id').value;
+            const lead = DB.leads.find(l => l.id === id);
+            if(!lead || !lead.recebimentos) return;
+            if(!confirm('Remover este recebimento?')) return;
+            lead.recebimentos = lead.recebimentos.filter(r => r.id !== rid);
+            saveLeadsDB();
+            renderControleComissao(lead);
+            showToast('Recebimento removido.', 'info');
+        }
+
         window.openLeadDetails = function(id) {
-            const lead = DB.leads.find(l => l.id === id); 
+            const lead = DB.leads.find(l => l.id === id);
             if(!lead) return;
             
             document.getElementById('ld-id').value = lead.id;
@@ -3646,7 +3746,7 @@ window.toggleSidebar = function() {
                 else obsBox.classList.add('hidden');
             }
 
-            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin'].forEach(f => {
+            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao'].forEach(f => {
                 const el = document.getElementById(`ld-${f}`);
                 if(el) el.value = lead[f] || '';
             });
@@ -3723,6 +3823,7 @@ window.toggleSidebar = function() {
                         if(lead.updatedBy) parts.push(`<i class="fa-solid fa-user-pen text-blue-400"></i> Última edição: <b class="text-slate-300">${lead.updatedBy}</b> ${lead.updatedAt ? '· ' + new Date(lead.updatedAt).toLocaleString('pt-BR') : ''}`);
                         info.innerHTML = parts.length ? parts.join('<br>') : 'Sem histórico de venda registrado ainda.';
                     }
+                    renderControleComissao(lead); // resumo + recebimentos de comissão
                 } else {
                     saleSection.classList.add('hidden');
                 }
