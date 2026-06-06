@@ -710,7 +710,7 @@
   for (var i = 1; i < ids.length; i++) {
     if (String(ids[i][0]) === String(d.id)) { linha = i + 1; break; }
   }
-  var row = [d.id, d.data, d.mes, d.corretor, d.equipe, d.cliente, d.construtora, d.empreendimento, d.dataAprovacao, d.mesAprovacao, d.analise, d.dataGanho, d.mesGanho, d.ganho, d.situacao, d.vgv, d.comissaoTotal, d.percentualNota, d.valorDescontoNota, d.comissaoLiquida, d.comissaoCorretor, d.comissaoGerente, d.recebidoCorretor, d.recebidoGerente, d.totalRecebido, d.faltaReceber, d.mesRecebimento, d.detalheRecebimentos];
+  var row = [d.id, d.data, d.mes, d.corretor, d.equipe, d.cliente, d.construtora, d.empreendimento, d.dataAprovacao, d.mesAprovacao, d.analise, d.dataGanho, d.mesGanho, d.ganho, d.situacao, d.vgv, d.comissaoTotal, d.percentualNota, d.valorDescontoNota, d.comissaoLiquida, d.comissaoCorretor, d.comissaoGerente, d.recebidoCorretor, d.recebidoGerente, d.totalRecebido, d.faltaReceber, d.mesRecebimento, d.detalheRecebimentos, d.temBonus, d.valorBonus];
   if (linha === -1) { sheet.appendRow(row); linha = sheet.getLastRow(); }
   else { sheet.getRange(linha, 1, 1, row.length).setValues([row]); }
   var sit = String(d.situacao || "");
@@ -721,6 +721,7 @@
   sheet.getRange(linha, 1, 1, row.length).setBackground(cor);
   sheet.getRange(linha, 16, 1, 2).setNumberFormat("R$ #,##0.00");
   sheet.getRange(linha, 19, 1, 8).setNumberFormat("R$ #,##0.00");
+  sheet.getRange(linha, 30, 1, 1).setNumberFormat("R$ #,##0.00");
   return ContentService.createTextOutput(JSON.stringify({ok:true}));
 }</textarea>
                                         </div>
@@ -1410,10 +1411,25 @@
                                         <div id="ld-receb-lista" class="mt-3 space-y-2"></div>
                                     </div>
 
+                                    <!-- BÔNUS -->
+                                    <div class="mt-5 grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="text-slate-500 text-xs font-semibold uppercase">Tem Bônus?</label>
+                                            <select id="ld-temBonus" onchange="toggleBonus()" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead text-sm">
+                                                <option value="Não">Não</option>
+                                                <option value="Sim">Sim</option>
+                                            </select>
+                                        </div>
+                                        <div id="ld-bonus-valor-wrap" class="hidden">
+                                            <label class="text-slate-500 text-xs font-semibold uppercase">Valor do Bônus</label>
+                                            <input id="ld-valorBonus" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead currency-mask text-sm" placeholder="R$ 0,00">
+                                        </div>
+                                    </div>
+
                                     <!-- SITUAÇÃO / OBSERVAÇÕES DA VENDA -->
                                     <div class="mt-5">
                                         <label class="text-slate-500 text-xs font-semibold uppercase">Situação / Observações da Venda</label>
-                                        <textarea id="ld-vendaSituacao" rows="2" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead text-sm resize-none" placeholder="Ex: venda com bônus corretor, entrada parcelada, condições especiais..."></textarea>
+                                        <textarea id="ld-vendaSituacao" rows="2" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead text-sm resize-none" placeholder="Ex: entrada parcelada, condições especiais..."></textarea>
                                     </div>
                                 </div>
 
@@ -1866,7 +1882,9 @@
                         totalRecebido: ehFin ? totalRecebido : '',
                         faltaReceber: ehFin ? faltaReceber : '',
                         mesRecebimento: mesRec,
-                        detalheRecebimentos: detalheRec
+                        detalheRecebimentos: detalheRec,
+                        temBonus: ehFin ? (lead.temBonus || 'Não') : '',
+                        valorBonus: (ehFin && lead.temBonus === 'Sim') ? (lead.valorBonus || 0) : ''
                     })
                 });
                 if(tracked) lead.naPlanilha = true;
@@ -3345,14 +3363,14 @@ window.toggleSidebar = function() {
             if(!lead) return;
 
             // Campos monetários: converter R$ mascarado para número
-            const currencyFields = { vgv: 'ld-vgv', commissionValue: 'ld-commission-value', propertyValue: 'ld-property-value' };
+            const currencyFields = { vgv: 'ld-vgv', commissionValue: 'ld-commission-value', propertyValue: 'ld-property-value', valorBonus: 'ld-valorBonus' };
             Object.entries(currencyFields).forEach(([field, elId]) => {
                 const el = document.getElementById(elId);
                 if(el && !el.disabled) lead[field] = parseCurrency(el.value);
             });
 
             // Campos textuais
-            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao'].forEach(f => {
+            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao','temBonus'].forEach(f => {
                 const el = document.getElementById(`ld-${f}`);
                 if(el && !el.disabled) lead[f] = el.value;
             });
@@ -3696,6 +3714,15 @@ window.toggleSidebar = function() {
             }
         }
 
+        // Mostra/esconde o campo de valor do bônus conforme Sim/Não
+        window.toggleBonus = function() {
+            const sel = document.getElementById('ld-temBonus');
+            const wrap = document.getElementById('ld-bonus-valor-wrap');
+            if(!sel || !wrap) return;
+            if(sel.value === 'Sim') wrap.classList.remove('hidden');
+            else wrap.classList.add('hidden');
+        }
+
         window.addRecebimento = function() {
             const id = document.getElementById('ld-id').value;
             const lead = DB.leads.find(l => l.id === id);
@@ -3774,7 +3801,7 @@ window.toggleSidebar = function() {
                 else obsBox.classList.add('hidden');
             }
 
-            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao'].forEach(f => {
+            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao','temBonus'].forEach(f => {
                 const el = document.getElementById(`ld-${f}`);
                 if(el) el.value = lead[f] || '';
             });
@@ -3785,6 +3812,9 @@ window.toggleSidebar = function() {
             if(vgvEl) vgvEl.value = formatCurrencyInput(lead.vgv || 0);
             const commEl = document.getElementById('ld-commission-value');
             if(commEl) commEl.value = formatCurrencyInput(lead.commissionValue || 0);
+            const bonusEl = document.getElementById('ld-valorBonus');
+            if(bonusEl) bonusEl.value = formatCurrencyInput(lead.valorBonus || 0);
+            toggleBonus(); // mostra/esconde o campo de valor conforme Sim/Não
             const tempEl = document.getElementById('ld-temp-select');
             if(tempEl) tempEl.value = lead.temp || 'Novo';
 
