@@ -710,16 +710,17 @@
   for (var i = 1; i < ids.length; i++) {
     if (String(ids[i][0]) === String(d.id)) { linha = i + 1; break; }
   }
-  var row = [d.id, d.data, d.mes, d.corretor, d.equipe, d.cliente, d.construtora, d.empreendimento, d.dataAprovacao, d.mesAprovacao, d.analise, d.dataGanho, d.mesGanho, d.ganho, d.situacao, d.vgv, d.comissaoTotal, d.percentualNota, d.valorDescontoNota, d.comissaoLiquida, d.comissaoGerente, d.comissaoCorretor];
+  var row = [d.id, d.data, d.mes, d.corretor, d.equipe, d.cliente, d.construtora, d.empreendimento, d.dataAprovacao, d.mesAprovacao, d.analise, d.dataGanho, d.mesGanho, d.ganho, d.situacao, d.vgv, d.comissaoTotal, d.percentualNota, d.valorDescontoNota, d.comissaoLiquida, d.comissaoCorretor, d.comissaoGerente, d.recebidoCorretor, d.recebidoGerente, d.totalRecebido, d.faltaReceber, d.mesRecebimento, d.detalheRecebimentos];
   if (linha === -1) { sheet.appendRow(row); linha = sheet.getLastRow(); }
   else { sheet.getRange(linha, 1, 1, row.length).setValues([row]); }
   var sit = String(d.situacao || "");
   var cor = null;
   if (sit.indexOf("Cancelado") === 0) cor = "#f4cccc";
+  else if (sit.indexOf("Recebido Integral") !== -1) cor = "#cfe2f3";
   else if (sit.indexOf("Ganho") === 0) cor = "#d9ead3";
   sheet.getRange(linha, 1, 1, row.length).setBackground(cor);
   sheet.getRange(linha, 16, 1, 2).setNumberFormat("R$ #,##0.00");
-  sheet.getRange(linha, 19, 1, 4).setNumberFormat("R$ #,##0.00");
+  sheet.getRange(linha, 19, 1, 8).setNumberFormat("R$ #,##0.00");
   return ContentService.createTextOutput(JSON.stringify({ok:true}));
 }</textarea>
                                         </div>
@@ -1710,7 +1711,8 @@
                 { id: 'quitado', title: 'Quitado', color: 'border-l-green-400' },
                 { id: 'repasse', title: 'Repasse', color: 'border-l-indigo-400' },
                 { id: 'comissao', title: 'Comissão', color: 'border-l-emerald-400' },
-                { id: 'pos-venda', title: 'Pós-venda', color: 'border-l-pink-400' }
+                { id: 'pos-venda', title: 'Pós-venda', color: 'border-l-pink-400' },
+                { id: 'recebido-integral', title: 'Recebido Integral', color: 'border-l-blue-400' }
             ],
             cancelados: [
                 { id: 'cancelado', title: 'Cancelado', color: 'border-l-red-500' }
@@ -1782,6 +1784,14 @@
             return lead.pipeline;
         }
 
+        // Converte "DD/MM/YYYY" em "Mês/AAAA"
+        function mesRefDeDataBR(d) {
+            if(!d) return '';
+            const p = String(d).split('/');
+            if(p.length === 3) return MESES_PT[parseInt(p[1],10)-1] + '/' + p[2];
+            return '';
+        }
+
         // Data e mês do Ganho (a partir da data da venda)
         function dadosGanho(lead) {
             if(lead.pipeline !== 'financeiro') return { data: '', mes: '' };
@@ -1811,6 +1821,16 @@
             const ehFin = lead.pipeline === 'financeiro';
             const com = ehFin ? calcularComissoes(lead.vgv || 0, lead.commissionPctTotal || 0, lead.commissionPctCorretor || 0, lead.commissionPctGerente || 0) : null;
             const ganho = dadosGanho(lead);
+            // Recebimentos de comissão
+            const recs = (ehFin && lead.recebimentos) ? lead.recebimentos : [];
+            const recCorr = recs.filter(r => r.tipo === 'Corretor').reduce((s,r) => s + (r.valor||0), 0);
+            const recGer = recs.filter(r => r.tipo === 'Gerente').reduce((s,r) => s + (r.valor||0), 0);
+            const totalRecebido = recCorr + recGer;
+            const totalComissaoPagar = com ? (com.corretor + com.gerente) : 0;
+            const faltaReceber = Math.max(0, totalComissaoPagar - totalRecebido);
+            const ultimoRec = recs.length ? recs[recs.length-1] : null;
+            const mesRec = ultimoRec ? mesRefDeDataBR(ultimoRec.data) : '';
+            const detalheRec = recs.map(r => `${r.tipo} ${formatCurrency(r.valor)} (${r.data||''})`).join('; ');
             try {
                 const broker = DB.users.find(u => u.name === lead.broker);
                 const agora = new Date();
@@ -1839,8 +1859,14 @@
                         percentualNota: com ? com.pctNota : '',
                         valorDescontoNota: com ? com.descontoNota : '',
                         comissaoLiquida: com ? com.liquida : '',
+                        comissaoCorretor: com ? com.corretor : '',
                         comissaoGerente: com ? com.gerente : '',
-                        comissaoCorretor: com ? com.corretor : ''
+                        recebidoCorretor: ehFin ? recCorr : '',
+                        recebidoGerente: ehFin ? recGer : '',
+                        totalRecebido: ehFin ? totalRecebido : '',
+                        faltaReceber: ehFin ? faltaReceber : '',
+                        mesRecebimento: mesRec,
+                        detalheRecebimentos: detalheRec
                     })
                 });
                 if(tracked) lead.naPlanilha = true;
@@ -3684,6 +3710,7 @@ window.toggleSidebar = function() {
             lead.timeline = lead.timeline || [];
             lead.timeline.unshift(`[${getTime()}] Recebimento de comissão (${tipo}): ${formatCurrency(valor)}`);
             saveLeadsDB();
+            sincronizarPlanilha(lead); // atualiza recebimentos na planilha
             document.getElementById('ld-receb-valor').value = '';
             document.getElementById('ld-receb-data').value = '';
             renderControleComissao(lead);
@@ -3698,6 +3725,7 @@ window.toggleSidebar = function() {
             if(!confirm('Remover este recebimento?')) return;
             lead.recebimentos = lead.recebimentos.filter(r => r.id !== rid);
             saveLeadsDB();
+            sincronizarPlanilha(lead);
             renderControleComissao(lead);
             showToast('Recebimento removido.', 'info');
         }
