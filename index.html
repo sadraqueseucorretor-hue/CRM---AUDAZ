@@ -1894,6 +1894,15 @@
             const bonusLiquido = bonusTotal - bonusDesconto;
             const bonusRecebido = temBonus ? (lead.bonusRecebido || 0) : 0;
             const bonusFalta = Math.max(0, bonusLiquido - bonusRecebido);
+            // Data e mês de referência do recebimento do bônus
+            let bonusDataReceb = '', bonusMesReceb = '';
+            if(temBonus && lead.bonusDataRecebido) {
+                const pb = lead.bonusDataRecebido.split('-'); // YYYY-MM-DD
+                if(pb.length === 3) {
+                    bonusDataReceb = pb[2] + '/' + pb[1] + '/' + pb[0];
+                    bonusMesReceb = MESES_PT[parseInt(pb[1],10)-1] + '/' + pb[0];
+                }
+            }
             try {
                 const broker = DB.users.find(u => u.name === lead.broker);
                 const agora = new Date();
@@ -1937,8 +1946,8 @@
                         bonusLiquido: temBonus ? bonusLiquido : '',
                         bonusRecebido: temBonus ? bonusRecebido : '',
                         bonusFalta: temBonus ? bonusFalta : '',
-                        bonusDataRecebido: temBonus ? (lead.bonusDataRecebido || '') : '',
-                        bonusMesRecebido: temBonus && lead.bonusDataRecebido ? (()=>{ const p=lead.bonusDataRecebido.split('-'); return p.length===3?MESES_PT[parseInt(p[1],10)-1]+'/'+p[0]:''; })() : ''
+                        bonusDataRecebido: bonusDataReceb,
+                        bonusMesRecebido: bonusMesReceb
                     })
                 });
                 if(tracked) lead.naPlanilha = true;
@@ -3424,7 +3433,7 @@ window.toggleSidebar = function() {
             });
 
             // Campos textuais
-            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao','temBonus','bonusBeneficiario','bonusPctNota'].forEach(f => {
+            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao','temBonus','bonusBeneficiario','bonusPctNota','bonusDataRecebido'].forEach(f => {
                 const el = document.getElementById(`ld-${f}`);
                 if(el && !el.disabled) lead[f] = el.value;
             });
@@ -3871,7 +3880,7 @@ window.toggleSidebar = function() {
                 else obsBox.classList.add('hidden');
             }
 
-            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao','temBonus','bonusBeneficiario','bonusPctNota'].forEach(f => {
+            ['phone','cpf','city','email','broker','income','fgts','dependents','score','entry','project','construtora','type','mcmv','subsidy','opObs','origin','vendaSituacao','temBonus','bonusBeneficiario','bonusPctNota','bonusDataRecebido'].forEach(f => {
                 const el = document.getElementById(`ld-${f}`);
                 if(el) el.value = lead[f] || '';
             });
