@@ -1950,7 +1950,7 @@
                         bonusMesRecebido: bonusMesReceb
                     })
                 });
-                if(tracked) lead.naPlanilha = true;
+                if(tracked && !lead.naPlanilha) { lead.naPlanilha = true; persistLeads(); }
             } catch(e) { console.error('Erro ao sincronizar planilha:', e); }
         }
 
@@ -3460,8 +3460,8 @@ window.toggleSidebar = function() {
             lead.updatedBy = currentUser.name;
 
             saveLeadsDB();
-            // Se o lead já está na planilha, atualiza nome/corretor/equipe/construtora/empreendimento
-            if(lead.naPlanilha) sincronizarPlanilha(lead);
+            // Sincroniza se o lead está em Análise/Financeiro OU se já estava na planilha
+            if(['analise','financeiro'].includes(lead.pipeline) || lead.naPlanilha) sincronizarPlanilha(lead);
             triggerAutoSaveUI('save-ind-lead');
         }
 
