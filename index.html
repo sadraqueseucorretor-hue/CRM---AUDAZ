@@ -713,8 +713,14 @@
     if (String(ids[i][0]) === String(d.id)) { linha = i + 1; break; }
   }
   var row = [d.id, d.data, d.mes, d.corretor, d.equipe, d.cliente, d.construtora, d.empreendimento, d.dataAprovacao, d.mesAprovacao, d.analise, d.dataGanho, d.mesGanho, d.ganho, d.situacao, d.vgv, d.comissaoTotal, d.percentualNota, d.valorDescontoNota, d.comissaoLiquida, d.comissaoCorretor, d.comissaoGerente, d.recebidoCorretor, d.recebidoGerente, d.totalRecebido, d.faltaReceber, d.mesRecebimento, d.detalheRecebimentos, d.temBonus, d.bonusBeneficiario, d.valorBonus, d.bonusPctNota, d.bonusLiquido, d.bonusRecebido, d.bonusFalta, d.bonusDataRecebido, d.bonusMesRecebido];
-  if (linha === -1) { linha = sheet.getLastRow() + 1; }
-  sheet.getRange(linha, 1, 1, row.length).setValues([row]);
+  if (linha === -1) {
+    linha = sheet.getLastRow() + 1;
+    sheet.getRange(linha, 1, 1, row.length).setValues([row]);
+  } else {
+    // Lead existente: preserva Data (col B) e Mes Cadastro (col C) originais
+    var rowSemData = row.slice(3);
+    sheet.getRange(linha, 4, 1, rowSemData.length).setValues([rowSemData]);
+  }
   var sit = String(d.situacao || "");
   var cor = null;
   if (sit.indexOf("Cancelado") === 0) cor = "#f4cccc";
