@@ -717,9 +717,15 @@
     linha = sheet.getLastRow() + 1;
     sheet.getRange(linha, 1, 1, row.length).setValues([row]);
   } else {
-    // Lead existente: preserva Data (col B) e Mes Cadastro (col C) originais
-    var rowSemData = row.slice(3);
-    sheet.getRange(linha, 4, 1, rowSemData.length).setValues([rowSemData]);
+    // Lead existente: preserva colunas imutaveis (so grava se estiver vazio)
+    var existing = sheet.getRange(linha, 1, 1, row.length).getValues()[0];
+    // Col B(1)=data, C(2)=mes, I(8)=dataAprovacao, J(9)=mesAprovacao, L(11)=dataGanho, M(12)=mesGanho
+    var imutaveis = [1, 2, 8, 9, 11, 12];
+    for (var k = 0; k < imutaveis.length; k++) {
+      var idx = imutaveis[k];
+      if (existing[idx] && String(existing[idx]).trim() !== '') row[idx] = existing[idx];
+    }
+    sheet.getRange(linha, 1, 1, row.length).setValues([row]);
   }
   var sit = String(d.situacao || "");
   var cor = null;
