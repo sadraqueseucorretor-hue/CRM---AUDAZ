@@ -5499,7 +5499,7 @@ window.toggleSidebar = function() {
                     const leadId = lead.numId ? '#' + String(lead.numId).padStart(4,'0') : '';
                     const pipeNames = { leads: 'Pipeline de Leads', analise: 'Análise de Crédito', financeiro: 'Ganhos / Financeiro', cancelados: 'Cancelados' };
                     const stageName = PIPELINES[lead.pipeline]?.find(s => s.id === lead.stageId)?.title || lead.stageId || '';
-                    const logoUrl = localStorage.getItem('audaz_sys_logo') || '';
+                    const logoUrl = SUPABASE_URL + '/storage/v1/object/public/crm-files/system/logo.png';
                     const textoPlano = 'Olá, ' + corretor.name + '!\n\n' +
                         currentUser.name + ' adicionou um comentário no lead abaixo:\n\n' +
                         'LEAD: ' + leadId + ' ' + lead.name + '\n' +
