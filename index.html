@@ -1881,12 +1881,6 @@
             if(!tracked && !lead.naPlanilha) return;
             // Registra no lead o último resultado da análise (persiste após sair da análise)
             if(lead.pipeline === 'analise') lead.analiseResult = resultadoAnalise(lead);
-            // Registra data e mês da aprovação na primeira vez que for aprovado
-            if(lead.pipeline === 'analise' && lead.stageId === 'aprovado' && !lead.dataAprovacao) {
-                const na = new Date();
-                lead.dataAprovacao = na.toLocaleDateString('pt-BR');
-                lead.mesAprovacao = MESES_PT[na.getMonth()] + '/' + na.getFullYear();
-            }
             const ehFin = lead.pipeline === 'financeiro';
             const com = ehFin ? calcularComissoes(lead.vgv || 0, lead.commissionPctTotal || 0, lead.commissionPctCorretor || 0, lead.commissionPctGerente || 0) : null;
             const ganho = dadosGanho(lead);
@@ -3404,10 +3398,16 @@ window.toggleSidebar = function() {
             // Usuário precisa clicar manualmente em "Mover Cliente" no modal.
             // Movimentação dentro do MESMO pipeline (entre colunas):
             const stageName = PIPELINES[currentPipeline].find(s => s.id === newStageId).title;
-            lead.stageId = newStageId; 
+            lead.stageId = newStageId;
             lead.updatedAt = new Date().toISOString();
             lead.updatedBy = currentUser.name;
             lead.timeline.unshift(`[${t}] ${currentUser.name} moveu para: ${stageName}`);
+            // Registra data/mês de aprovação na primeira vez que chega em Aprovado
+            if(lead.pipeline === 'analise' && newStageId === 'aprovado' && !lead.dataAprovacao) {
+                const na = new Date();
+                lead.dataAprovacao = na.toLocaleDateString('pt-BR');
+                lead.mesAprovacao = MESES_PT[na.getMonth()] + '/' + na.getFullYear();
+            }
             updateColumnOrder(newColumnEl);
             saveLeadsDB();
             sincronizarStatusAnalise(lead); // → atualiza status na planilha (se estiver em Análise)
