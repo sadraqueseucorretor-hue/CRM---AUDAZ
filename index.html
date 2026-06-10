@@ -785,7 +785,7 @@
                                 <div id="stat-gerentes" class="text-3xl font-bold text-white">0</div>
                             </div>
                             <div class="glass rounded-xl p-5 border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-transparent">
-                                <div class="flex items-center justify-between mb-2"><span class="text-xs font-bold uppercase tracking-wider text-emerald-300">Corretores</span><i class="fa-solid fa-handshake text-emerald-400"></i></div>
+                                <div class="flex items-center justify-between mb-2"><span class="text-xs font-bold uppercase tracking-wider text-emerald-300">Corretores Ativos</span><i class="fa-solid fa-handshake text-emerald-400"></i></div>
                                 <div id="stat-corretores" class="text-3xl font-bold text-white">0</div>
                             </div>
                             <div class="glass rounded-xl p-5 border border-slate-500/30 bg-gradient-to-br from-slate-500/10 to-transparent">
@@ -4715,7 +4715,7 @@ window.toggleSidebar = function() {
             // Stats por cargo (sempre mostra TODOS, não filtrados)
             document.getElementById('stat-diretores').textContent = DB.users.filter(u => u.role === 'Diretor').length;
             document.getElementById('stat-gerentes').textContent = DB.users.filter(u => u.role === 'Gerente').length;
-            document.getElementById('stat-corretores').textContent = DB.users.filter(u => u.role === 'Corretor').length;
+            document.getElementById('stat-corretores').textContent = DB.users.filter(u => u.role === 'Corretor' && u.status === 'Ativo').length;
             document.getElementById('stat-admins').textContent = DB.users.filter(u => u.role === 'Administrativo').length;
             
             const counterUsers = document.getElementById('counter-users');
