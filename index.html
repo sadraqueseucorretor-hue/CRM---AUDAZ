@@ -5489,6 +5489,26 @@ window.toggleSidebar = function() {
             renderLeadMessages(lead);
             renderTimeline(lead);
             showToast('Observação adicionada à conversa.', 'success');
+
+            // Envia email para o corretor do lead (se não for ele mesmo comentando)
+            if(SHEETS_URL && lead.broker && lead.broker !== currentUser.name) {
+                const corretor = DB.users.find(u => u.name === lead.broker);
+                if(corretor && corretor.email) {
+                    fetch(SHEETS_URL, {
+                        method: 'POST', mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            action: 'enviarEmail',
+                            para: corretor.email,
+                            assunto: 'CRM Audaz — Novo comentário no lead ' + (lead.numId ? '#' + String(lead.numId).padStart(4,'0') : '') + ' ' + lead.name,
+                            mensagem: 'Olá, ' + corretor.name + '!\n\n' +
+                                currentUser.name + ' adicionou um comentário no lead ' + lead.name + ':\n\n' +
+                                '"' + text + '"\n\n' +
+                                'Acesse o CRM para visualizar e responder.\n\nEquipe CRM Audaz'
+                        })
+                    });
+                }
+            }
         }
 
         // Atalho Ctrl+Enter para enviar
