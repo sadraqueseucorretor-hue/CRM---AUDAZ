@@ -701,7 +701,9 @@
                                             <textarea id="sheets-robo-code" readonly rows="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-[11px] text-green-300 font-mono leading-relaxed" spellcheck="false">function doPost(e) {
   var d = JSON.parse(e.postData.contents);
   if (d.action === "enviarEmail") {
-    MailApp.sendEmail(d.para, d.assunto, d.mensagem);
+    var opts = { name: "CRM Audaz" };
+    if (d.htmlMensagem) opts.htmlBody = d.htmlMensagem;
+    MailApp.sendEmail(d.para, d.assunto, d.mensagem, opts);
     return ContentService.createTextOutput(JSON.stringify({ok:true}));
   }
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
@@ -5497,6 +5499,53 @@ window.toggleSidebar = function() {
                     const leadId = lead.numId ? '#' + String(lead.numId).padStart(4,'0') : '';
                     const pipeNames = { leads: 'Pipeline de Leads', analise: 'Análise de Crédito', financeiro: 'Ganhos / Financeiro', cancelados: 'Cancelados' };
                     const stageName = PIPELINES[lead.pipeline]?.find(s => s.id === lead.stageId)?.title || lead.stageId || '';
+                    const logoUrl = localStorage.getItem('audaz_sys_logo') || '';
+                    const textoPlano = 'Olá, ' + corretor.name + '!\n\n' +
+                        currentUser.name + ' adicionou um comentário no lead abaixo:\n\n' +
+                        'LEAD: ' + leadId + ' ' + lead.name + '\n' +
+                        (lead.construtora ? 'Construtora: ' + lead.construtora + '\n' : '') +
+                        (lead.project ? 'Empreendimento: ' + lead.project + '\n' : '') +
+                        'Pipeline: ' + (pipeNames[lead.pipeline] || lead.pipeline) + '\n' +
+                        'Etapa: ' + stageName + '\n' +
+                        (lead.date ? 'Cadastrado em: ' + lead.date + '\n' : '') +
+                        '\nCOMENTÁRIO:\n"' + text + '"\n\nEquipe CRM Audaz';
+                    const htmlMensagem = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#0f172a;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;padding:32px 0;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:12px;overflow:hidden;max-width:560px;">
+      <tr><td style="background:#0f172a;padding:24px 32px;text-align:center;border-bottom:1px solid #334155;">
+        ${logoUrl ? `<img src="${logoUrl}" alt="CRM Audaz" style="max-height:56px;max-width:180px;object-fit:contain;">` : `<span style="color:#ffffff;font-size:22px;font-weight:bold;letter-spacing:1px;">CRM AUDAZ</span>`}
+      </td></tr>
+      <tr><td style="padding:28px 32px;">
+        <p style="color:#94a3b8;font-size:14px;margin:0 0 4px 0;">Olá, <strong style="color:#ffffff;">${corretor.name}</strong>!</p>
+        <p style="color:#94a3b8;font-size:14px;margin:0 0 24px 0;"><strong style="color:#3b82f6;">${currentUser.name}</strong> adicionou um comentário no lead abaixo:</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;border-radius:8px;border:1px solid #334155;margin-bottom:20px;">
+          <tr><td style="padding:16px 20px;border-bottom:1px solid #334155;">
+            <p style="margin:0;color:#3b82f6;font-size:18px;font-weight:bold;">${leadId} ${lead.name}</p>
+          </td></tr>
+          <tr><td style="padding:16px 20px;">
+            <table width="100%" cellpadding="0" cellspacing="6">
+              ${lead.construtora ? `<tr><td style="color:#64748b;font-size:13px;width:130px;">Construtora</td><td style="color:#e2e8f0;font-size:13px;">${lead.construtora}</td></tr>` : ''}
+              ${lead.project ? `<tr><td style="color:#64748b;font-size:13px;">Empreendimento</td><td style="color:#e2e8f0;font-size:13px;">${lead.project}</td></tr>` : ''}
+              <tr><td style="color:#64748b;font-size:13px;">Pipeline</td><td style="color:#e2e8f0;font-size:13px;">${pipeNames[lead.pipeline] || lead.pipeline}</td></tr>
+              <tr><td style="color:#64748b;font-size:13px;">Etapa</td><td style="color:#e2e8f0;font-size:13px;">${stageName}</td></tr>
+              ${lead.date ? `<tr><td style="color:#64748b;font-size:13px;">Cadastrado em</td><td style="color:#e2e8f0;font-size:13px;">${lead.date}</td></tr>` : ''}
+            </table>
+          </td></tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#1e3a5f;border-radius:8px;border-left:4px solid #3b82f6;">
+          <tr><td style="padding:16px 20px;">
+            <p style="margin:0 0 6px 0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Comentário</p>
+            <p style="margin:0;color:#e2e8f0;font-size:15px;line-height:1.6;">${text.replace(/\n/g,'<br>')}</p>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:16px 32px;border-top:1px solid #334155;text-align:center;">
+        <p style="margin:0;color:#475569;font-size:12px;">Equipe CRM Audaz · Premium Real Estate</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table></body></html>`;
                     fetch(SHEETS_URL, {
                         method: 'POST', mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -5504,18 +5553,8 @@ window.toggleSidebar = function() {
                             action: 'enviarEmail',
                             para: corretor.email,
                             assunto: 'CRM Audaz — Novo comentário no lead ' + leadId + ' ' + lead.name,
-                            mensagem: 'Olá, ' + corretor.name + '!\n\n' +
-                                currentUser.name + ' adicionou um comentário no lead abaixo:\n\n' +
-                                '━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-                                'LEAD: ' + leadId + ' ' + lead.name + '\n' +
-                                (lead.construtora ? 'Construtora: ' + lead.construtora + '\n' : '') +
-                                (lead.project ? 'Empreendimento: ' + lead.project + '\n' : '') +
-                                'Pipeline: ' + (pipeNames[lead.pipeline] || lead.pipeline) + '\n' +
-                                'Etapa: ' + stageName + '\n' +
-                                (lead.date ? 'Cadastrado em: ' + lead.date + '\n' : '') +
-                                '━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-                                'COMENTÁRIO:\n"' + text + '"\n\n' +
-                                'Acesse o CRM para visualizar e responder.\n\nEquipe CRM Audaz'
+                            mensagem: textoPlano,
+                            htmlMensagem: htmlMensagem
                         })
                     });
                 }
