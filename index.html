@@ -5494,16 +5494,28 @@ window.toggleSidebar = function() {
             if(SHEETS_URL && lead.broker && lead.broker !== currentUser.name) {
                 const corretor = DB.users.find(u => u.name === lead.broker);
                 if(corretor && corretor.email) {
+                    const leadId = lead.numId ? '#' + String(lead.numId).padStart(4,'0') : '';
+                    const pipeNames = { leads: 'Pipeline de Leads', analise: 'Análise de Crédito', financeiro: 'Ganhos / Financeiro', cancelados: 'Cancelados' };
+                    const stageName = PIPELINES[lead.pipeline]?.find(s => s.id === lead.stageId)?.title || lead.stageId || '';
                     fetch(SHEETS_URL, {
                         method: 'POST', mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify({
                             action: 'enviarEmail',
                             para: corretor.email,
-                            assunto: 'CRM Audaz — Novo comentário no lead ' + (lead.numId ? '#' + String(lead.numId).padStart(4,'0') : '') + ' ' + lead.name,
+                            assunto: 'CRM Audaz — Novo comentário no lead ' + leadId + ' ' + lead.name,
                             mensagem: 'Olá, ' + corretor.name + '!\n\n' +
-                                currentUser.name + ' adicionou um comentário no lead ' + lead.name + ':\n\n' +
-                                '"' + text + '"\n\n' +
+                                currentUser.name + ' adicionou um comentário no lead abaixo:\n\n' +
+                                '━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+                                'LEAD: ' + leadId + ' ' + lead.name + '\n' +
+                                (lead.construtora ? 'Construtora: ' + lead.construtora + '\n' : '') +
+                                (lead.project ? 'Empreendimento: ' + lead.project + '\n' : '') +
+                                'Pipeline: ' + (pipeNames[lead.pipeline] || lead.pipeline) + '\n' +
+                                'Etapa: ' + stageName + '\n' +
+                                (lead.temp ? 'Temperatura: ' + lead.temp + '\n' : '') +
+                                (lead.date ? 'Cadastrado em: ' + lead.date + '\n' : '') +
+                                '━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+                                'COMENTÁRIO:\n"' + text + '"\n\n' +
                                 'Acesse o CRM para visualizar e responder.\n\nEquipe CRM Audaz'
                         })
                     });
