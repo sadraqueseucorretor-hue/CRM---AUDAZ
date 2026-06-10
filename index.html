@@ -3368,7 +3368,7 @@ window.toggleSidebar = function() {
             const fuRow = fu
                 ? `<div class="fu-badge-slot flex items-center justify-between mt-3 px-3 py-2 rounded-lg ${fu.overdue ? 'bg-red-500/10 border border-red-500/30' : 'bg-blue-500/10 border border-blue-500/20'}">
                     <span class="fu-badge flex items-center gap-1.5 ${fu.overdue ? 'text-red-400' : 'text-blue-300'} text-[11px] font-semibold pointer-events-none"><i class="fa-solid fa-clock text-[10px]"></i>${fu.text}</span>
-                    <button onclick="openFollowUpPicker(event,'${lead.id}')" title="Editar follow-up" class="px-2.5 py-1 rounded-md ${fu.overdue ? 'bg-red-500/20 hover:bg-red-500 text-red-300' : 'bg-blue-500/20 hover:bg-blue-500 text-blue-300'} hover:text-white text-[11px] font-bold transition-all flex items-center gap-1"><i class="fa-solid fa-pen text-[9px]"></i>Editar</button>
+                    <button onclick="openFollowUpPicker(event,'${lead.id}')" title="Editar follow-up" class="px-2.5 py-1 rounded-md ${fu.overdue ? 'bg-red-500/20 hover:bg-red-500 text-red-300' : 'bg-blue-500/20 hover:bg-blue-500 text-blue-300'} hover:text-white text-[11px] font-bold transition-all flex items-center gap-1"><i class="fa-solid fa-clock text-[9px]"></i>Follow-up</button>
                   </div>`
                 : `<div class="fu-badge-slot mt-3">
                     <button onclick="openFollowUpPicker(event,'${lead.id}')" title="Agendar follow-up" class="w-full px-3 py-2 rounded-lg bg-slate-700/50 hover:bg-blue-600/20 border border-slate-600 hover:border-blue-500/50 text-slate-400 hover:text-blue-300 text-[11px] font-medium transition-all flex items-center justify-center gap-2"><i class="fa-solid fa-calendar-plus text-[11px]"></i>Agendar follow-up</button>
@@ -3878,8 +3878,8 @@ window.toggleSidebar = function() {
             
             const fuInfo = followUpInfo(lead.followUp);
             const fuSpan = fuInfo
-                ? `<span id="ld-fu-badge" class="text-[11px] px-2.5 py-1 rounded font-bold ml-2 align-middle ${fuInfo.overdue ? 'bg-red-500 text-white' : 'bg-blue-600 text-white'}"><i class="fa-solid fa-clock mr-1"></i>${fuInfo.text}</span>`
-                : '';
+                ? `<span id="ld-fu-badge" class="text-[11px] px-2.5 py-1 rounded font-bold ml-2 align-middle ${fuInfo.overdue ? 'bg-red-500 text-white' : 'bg-blue-600 text-white'}"><i class="fa-solid fa-clock mr-1"></i>${fuInfo.text}</span><button onclick="openFollowUpPicker(event,'${lead.id}')" class="text-[11px] px-2.5 py-1 rounded font-bold ml-1 align-middle bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white transition-all"><i class="fa-solid fa-clock mr-1"></i>Follow-up</button>`
+                : `<button onclick="openFollowUpPicker(event,'${lead.id}')" class="text-[11px] px-2.5 py-1 rounded font-medium ml-2 align-middle bg-slate-700 hover:bg-blue-600 text-slate-400 hover:text-white transition-all"><i class="fa-solid fa-calendar-plus mr-1"></i>Follow-up</button>`;
             document.getElementById('ld-name').innerHTML = `${lead.numId ? '<span class="text-blue-400 text-lg align-middle mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${lead.name}${fuSpan}`;
             document.getElementById('ld-avatar').innerText = lead.name.substring(0,2).toUpperCase();
             
@@ -6091,7 +6091,7 @@ window.toggleSidebar = function() {
                     if(slot && fi) {
                         slot.outerHTML = `<div class="fu-badge-slot flex items-center justify-between mt-3 px-3 py-2 rounded-lg ${fi.overdue?'bg-red-500/10 border border-red-500/30':'bg-blue-500/10 border border-blue-500/20'}">
                             <span class="fu-badge flex items-center gap-1.5 ${fi.overdue?'text-red-400':'text-blue-300'} text-[11px] font-semibold pointer-events-none"><i class="fa-solid fa-clock text-[10px]"></i>${fi.text}</span>
-                            <button onclick="openFollowUpPicker(event,'${_fuLeadId}')" class="px-2.5 py-1 rounded-md ${fi.overdue?'bg-red-500/20 hover:bg-red-500 text-red-300':'bg-blue-500/20 hover:bg-blue-500 text-blue-300'} hover:text-white text-[11px] font-bold transition-all flex items-center gap-1"><i class="fa-solid fa-pen text-[9px]"></i>Editar</button>
+                            <button onclick="openFollowUpPicker(event,'${_fuLeadId}')" class="px-2.5 py-1 rounded-md ${fi.overdue?'bg-red-500/20 hover:bg-red-500 text-red-300':'bg-blue-500/20 hover:bg-blue-500 text-blue-300'} hover:text-white text-[11px] font-bold transition-all flex items-center gap-1"><i class="fa-solid fa-clock text-[9px]"></i>Follow-up</button>
                         </div>`;
                     }
                 }
