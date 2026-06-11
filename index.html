@@ -6098,9 +6098,16 @@ window.toggleSidebar = function() {
                         </div>`;
                     }
                 }
-                // Atualiza campo no modal se estiver aberto
-                const fuEl = document.getElementById('ld-followUp');
-                if(fuEl) fuEl.value = _fuPickerDate.toISOString().slice(0,16);
+                // Atualiza o cabeçalho do modal do lead se estiver aberto para este lead
+                const ldIdEl = document.getElementById('ld-id');
+                if(ldIdEl && ldIdEl.value === _fuLeadId) {
+                    const fi = followUpInfo(lead.followUp);
+                    const fuSpan = fi
+                        ? `<span id="ld-fu-badge" class="text-[11px] px-2.5 py-1 rounded font-bold ml-2 align-middle ${fi.overdue ? 'bg-red-500 text-white' : 'bg-blue-600 text-white'}"><i class="fa-solid fa-clock mr-1"></i>${fi.text}</span><button onclick="openFollowUpPicker(event,'${lead.id}')" class="text-[11px] px-2.5 py-1 rounded font-bold ml-1 align-middle bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white transition-all"><i class="fa-solid fa-clock mr-1"></i>Follow-up</button>`
+                        : `<button onclick="openFollowUpPicker(event,'${lead.id}')" class="text-[11px] px-2.5 py-1 rounded font-medium ml-2 align-middle bg-slate-700 hover:bg-blue-600 text-slate-400 hover:text-white transition-all"><i class="fa-solid fa-calendar-plus mr-1"></i>Follow-up</button>`;
+                    const nameEl = document.getElementById('ld-name');
+                    if(nameEl) nameEl.innerHTML = `${lead.numId ? '<span class="text-blue-400 text-lg align-middle mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${lead.name}${fuSpan}`;
+                }
                 showToast('Follow-up agendado: ' + _fuPickerDate.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}), 'success');
             }
             document.getElementById('fu-picker-popup').classList.add('hidden');
