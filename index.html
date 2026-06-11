@@ -1297,12 +1297,15 @@
                             <!-- Selects ocultos mantidos para compatibilidade -->
                             <select id="ld-pipeline-select" class="hidden"><option value="leads">Leads</option><option value="analise">Análise de Crédito</option><option value="financeiro">Ganhos / Financeiro</option></select>
                             <select id="ld-stage-select" class="hidden"></select>
-                            <span id="ld-pipeline-badge" class="hidden">—</span>
-                            <span id="ld-broker-badge" class="hidden">—</span>
-                            <span id="ld-construtora-badge" class="hidden">—</span>
-                            <span id="ld-empreendimento-badge" class="hidden">—</span>
                             <span id="ld-stage-badge" class="hidden">—</span>
                             <span id="ld-date" class="hidden">--</span>
+                        </div>
+                        <!-- Badges: pipeline, corretor, construtora, empreendimento — sempre na mesma linha -->
+                        <div class="flex items-center gap-2 mt-2 flex-nowrap overflow-x-auto pb-1">
+                            <span id="ld-pipeline-badge" class="hidden whitespace-nowrap">—</span>
+                            <span id="ld-broker-badge" class="hidden whitespace-nowrap">—</span>
+                            <span id="ld-construtora-badge" class="hidden whitespace-nowrap">—</span>
+                            <span id="ld-empreendimento-badge" class="hidden whitespace-nowrap">—</span>
                         </div>
                     </div>
                 </div>
@@ -3891,13 +3894,13 @@ window.toggleSidebar = function() {
             const stageName = PIPELINES[lead.pipeline]?.find(s => s.id === lead.stageId)?.title || lead.stageId;
             const pBadge = document.getElementById('ld-pipeline-badge');
             const sBadge = document.getElementById('ld-stage-badge');
-            if(pBadge) { pBadge.textContent = pipeNames[lead.pipeline] || lead.pipeline; pBadge.className = 'text-sm font-bold rounded px-3 py-1 border ' + (pipeColors[lead.pipeline] || 'bg-slate-800 text-white border-slate-600'); }
+            if(pBadge) { pBadge.textContent = pipeNames[lead.pipeline] || lead.pipeline; pBadge.className = 'text-sm font-bold rounded px-3 py-1 border whitespace-nowrap flex-shrink-0 ' + (pipeColors[lead.pipeline] || 'bg-slate-800 text-white border-slate-600'); }
             if(sBadge) sBadge.textContent = stageName;
             const brokerBadge = document.getElementById('ld-broker-badge');
             if(brokerBadge) {
                 if(lead.broker && lead.broker !== 'Não Atribuído') {
                     brokerBadge.innerHTML = `<i class="fa-solid fa-user-tie mr-1.5"></i>${lead.broker}`;
-                    brokerBadge.className = 'text-sm font-bold rounded px-3 py-1 border bg-slate-700/40 text-slate-200 border-slate-600';
+                    brokerBadge.className = 'text-sm font-bold rounded px-3 py-1 border whitespace-nowrap flex-shrink-0 bg-slate-700/40 text-slate-200 border-slate-600';
                 } else {
                     brokerBadge.className = 'hidden';
                 }
@@ -3906,7 +3909,7 @@ window.toggleSidebar = function() {
             if(construtoraBadge) {
                 if(lead.construtora) {
                     construtoraBadge.innerHTML = `<i class="fa-solid fa-building mr-1.5"></i>${lead.construtora}`;
-                    construtoraBadge.className = 'text-sm font-bold rounded px-3 py-1 border bg-amber-500/15 text-amber-300 border-amber-500/30';
+                    construtoraBadge.className = 'text-sm font-bold rounded px-3 py-1 border whitespace-nowrap flex-shrink-0 bg-amber-500/15 text-amber-300 border-amber-500/30';
                 } else {
                     construtoraBadge.className = 'hidden';
                 }
@@ -3915,7 +3918,7 @@ window.toggleSidebar = function() {
             if(empreendimentoBadge) {
                 if(lead.project) {
                     empreendimentoBadge.innerHTML = `<i class="fa-solid fa-city mr-1.5"></i>${lead.project}`;
-                    empreendimentoBadge.className = 'text-sm font-bold rounded px-3 py-1 border bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
+                    empreendimentoBadge.className = 'text-sm font-bold rounded px-3 py-1 border whitespace-nowrap flex-shrink-0 bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
                 } else {
                     empreendimentoBadge.className = 'hidden';
                 }
