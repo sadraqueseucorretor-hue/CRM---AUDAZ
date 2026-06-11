@@ -1298,6 +1298,7 @@
                             <select id="ld-pipeline-select" class="hidden"><option value="leads">Leads</option><option value="analise">Análise de Crédito</option><option value="financeiro">Ganhos / Financeiro</option></select>
                             <select id="ld-stage-select" class="hidden"></select>
                             <span id="ld-pipeline-badge" class="hidden">—</span>
+                            <span id="ld-broker-badge" class="hidden">—</span>
                             <span id="ld-stage-badge" class="hidden">—</span>
                             <span id="ld-date" class="hidden">--</span>
                         </div>
@@ -3890,6 +3891,15 @@ window.toggleSidebar = function() {
             const sBadge = document.getElementById('ld-stage-badge');
             if(pBadge) { pBadge.textContent = pipeNames[lead.pipeline] || lead.pipeline; pBadge.className = 'text-sm font-bold rounded px-3 py-1 border ' + (pipeColors[lead.pipeline] || 'bg-slate-800 text-white border-slate-600'); }
             if(sBadge) sBadge.textContent = stageName;
+            const brokerBadge = document.getElementById('ld-broker-badge');
+            if(brokerBadge) {
+                if(lead.broker && lead.broker !== 'Não Atribuído') {
+                    brokerBadge.innerHTML = `<i class="fa-solid fa-user-tie mr-1.5"></i>${lead.broker}`;
+                    brokerBadge.className = 'text-sm font-bold rounded px-3 py-1 border bg-slate-700/40 text-slate-200 border-slate-600';
+                } else {
+                    brokerBadge.className = 'hidden';
+                }
+            }
 
             // Preenche as listas (Construtora / Empreendimento) antes de setar os valores
             populateListaDropdowns(lead);
