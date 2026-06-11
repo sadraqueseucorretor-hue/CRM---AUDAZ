@@ -6028,10 +6028,17 @@ window.toggleSidebar = function() {
             renderFuPicker();
             const popup = document.getElementById('fu-picker-popup');
             popup.classList.remove('hidden');
-            // Posiciona próximo ao botão clicado
+            // Posiciona próximo ao botão clicado (position: fixed = relativo à viewport)
             const rect = e.target.closest('button').getBoundingClientRect();
-            const left = Math.min(rect.left, window.innerWidth - 290);
-            const top = rect.bottom + 8 + window.scrollY;
+            const popupW = 288, popupH = popup.offsetHeight || 360;
+            // Horizontal: não deixa sair pela direita nem pela esquerda
+            let left = Math.min(rect.left, window.innerWidth - popupW - 12);
+            left = Math.max(12, left);
+            // Vertical: abre abaixo; se não couber, abre acima do botão
+            let top = rect.bottom + 8;
+            if(top + popupH > window.innerHeight - 12) {
+                top = Math.max(12, rect.top - popupH - 8);
+            }
             popup.style.left = left + 'px';
             popup.style.top = top + 'px';
         };
