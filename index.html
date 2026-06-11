@@ -1299,6 +1299,8 @@
                             <select id="ld-stage-select" class="hidden"></select>
                             <span id="ld-pipeline-badge" class="hidden">—</span>
                             <span id="ld-broker-badge" class="hidden">—</span>
+                            <span id="ld-construtora-badge" class="hidden">—</span>
+                            <span id="ld-empreendimento-badge" class="hidden">—</span>
                             <span id="ld-stage-badge" class="hidden">—</span>
                             <span id="ld-date" class="hidden">--</span>
                         </div>
@@ -3898,6 +3900,24 @@ window.toggleSidebar = function() {
                     brokerBadge.className = 'text-sm font-bold rounded px-3 py-1 border bg-slate-700/40 text-slate-200 border-slate-600';
                 } else {
                     brokerBadge.className = 'hidden';
+                }
+            }
+            const construtoraBadge = document.getElementById('ld-construtora-badge');
+            if(construtoraBadge) {
+                if(lead.construtora) {
+                    construtoraBadge.innerHTML = `<i class="fa-solid fa-building mr-1.5"></i>${lead.construtora}`;
+                    construtoraBadge.className = 'text-sm font-bold rounded px-3 py-1 border bg-amber-500/15 text-amber-300 border-amber-500/30';
+                } else {
+                    construtoraBadge.className = 'hidden';
+                }
+            }
+            const empreendimentoBadge = document.getElementById('ld-empreendimento-badge');
+            if(empreendimentoBadge) {
+                if(lead.project) {
+                    empreendimentoBadge.innerHTML = `<i class="fa-solid fa-city mr-1.5"></i>${lead.project}`;
+                    empreendimentoBadge.className = 'text-sm font-bold rounded px-3 py-1 border bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
+                } else {
+                    empreendimentoBadge.className = 'hidden';
                 }
             }
 
