@@ -3894,13 +3894,13 @@ window.toggleSidebar = function() {
             const stageName = PIPELINES[lead.pipeline]?.find(s => s.id === lead.stageId)?.title || lead.stageId;
             const pBadge = document.getElementById('ld-pipeline-badge');
             const sBadge = document.getElementById('ld-stage-badge');
-            if(pBadge) { pBadge.textContent = pipeNames[lead.pipeline] || lead.pipeline; pBadge.className = 'text-sm font-bold rounded px-3 py-1 border whitespace-nowrap flex-shrink-0 ' + (pipeColors[lead.pipeline] || 'bg-slate-800 text-white border-slate-600'); }
+            if(pBadge) { pBadge.textContent = pipeNames[lead.pipeline] || lead.pipeline; pBadge.className = 'text-xs font-bold rounded px-2.5 py-0.5 border whitespace-nowrap flex-shrink-0 ' + (pipeColors[lead.pipeline] || 'bg-slate-800 text-white border-slate-600'); }
             if(sBadge) sBadge.textContent = stageName;
             const brokerBadge = document.getElementById('ld-broker-badge');
             if(brokerBadge) {
                 if(lead.broker && lead.broker !== 'Não Atribuído') {
                     brokerBadge.innerHTML = `<i class="fa-solid fa-user-tie mr-1.5"></i>${lead.broker}`;
-                    brokerBadge.className = 'text-sm font-bold rounded px-3 py-1 border whitespace-nowrap flex-shrink-0 bg-slate-700/40 text-slate-200 border-slate-600';
+                    brokerBadge.className = 'text-xs font-bold rounded px-2.5 py-0.5 border whitespace-nowrap flex-shrink-0 bg-slate-700/40 text-slate-200 border-slate-600';
                 } else {
                     brokerBadge.className = 'hidden';
                 }
@@ -3909,7 +3909,7 @@ window.toggleSidebar = function() {
             if(construtoraBadge) {
                 if(lead.construtora) {
                     construtoraBadge.innerHTML = `<i class="fa-solid fa-building mr-1.5"></i>${lead.construtora}`;
-                    construtoraBadge.className = 'text-sm font-bold rounded px-3 py-1 border whitespace-nowrap flex-shrink-0 bg-amber-500/15 text-amber-300 border-amber-500/30';
+                    construtoraBadge.className = 'text-xs font-bold rounded px-2.5 py-0.5 border whitespace-nowrap flex-shrink-0 bg-amber-500/15 text-amber-300 border-amber-500/30';
                 } else {
                     construtoraBadge.className = 'hidden';
                 }
@@ -3918,7 +3918,7 @@ window.toggleSidebar = function() {
             if(empreendimentoBadge) {
                 if(lead.project) {
                     empreendimentoBadge.innerHTML = `<i class="fa-solid fa-city mr-1.5"></i>${lead.project}`;
-                    empreendimentoBadge.className = 'text-sm font-bold rounded px-3 py-1 border whitespace-nowrap flex-shrink-0 bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
+                    empreendimentoBadge.className = 'text-xs font-bold rounded px-2.5 py-0.5 border whitespace-nowrap flex-shrink-0 bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
                 } else {
                     empreendimentoBadge.className = 'hidden';
                 }
