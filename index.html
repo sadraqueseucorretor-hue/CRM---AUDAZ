@@ -5982,6 +5982,13 @@ window.toggleSidebar = function() {
             lead.updatedBy = currentUser.name;
             lead.timeline.unshift(`[${t}] ${currentUser.name} alterou etapa para: ${stageName}`);
 
+            // Registra data/mês de aprovação na primeira vez que chega em Aprovado
+            if(lead.pipeline === 'analise' && newStageId === 'aprovado' && !lead.dataAprovacao) {
+                const na = new Date();
+                lead.dataAprovacao = na.toLocaleDateString('pt-BR');
+                lead.mesAprovacao = MESES_PT[na.getMonth()] + '/' + na.getFullYear();
+            }
+
             saveLeadsDB();
             sincronizarStatusAnalise(lead); // → atualiza status na planilha (se estiver em Análise)
             renderTimeline(lead);
@@ -6017,6 +6024,13 @@ window.toggleSidebar = function() {
             lead.updatedAt = new Date().toISOString();
             lead.updatedBy = currentUser.name;
             lead.timeline.unshift(`[${t}] ${currentUser.name} alterou etapa para: ${stageName}`);
+
+            // Registra data/mês de aprovação na primeira vez que chega em Aprovado
+            if(lead.pipeline === 'analise' && newStageId === 'aprovado' && !lead.dataAprovacao) {
+                const na = new Date();
+                lead.dataAprovacao = na.toLocaleDateString('pt-BR');
+                lead.mesAprovacao = MESES_PT[na.getMonth()] + '/' + na.getFullYear();
+            }
 
             saveLeadsDB();
             sincronizarStatusAnalise(lead); // → atualiza status na planilha (se estiver em Análise)
