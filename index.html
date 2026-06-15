@@ -5255,10 +5255,24 @@ window.toggleSidebar = function() {
             const lead = DB.leads.find(l => l.id === leadId);
             if(!lead || !currentMoveTarget) return;
 
+            // Para enviar à Análise é obrigatório informar Construtora e Empreendimento
+            if(currentMoveTarget === 'analise') {
+                const construtoraVal = (document.getElementById('ld-construtora')?.value || lead.construtora || '').trim();
+                const projectVal = (document.getElementById('ld-project')?.value || lead.project || '').trim();
+                if(!construtoraVal || !projectVal) {
+                    showToast('Para enviar à Análise, preencha a Construtora e o Empreendimento no cadastro do lead.', 'error');
+                    closeModal('modal-move-client');
+                    return;
+                }
+                // Garante que os valores fiquem salvos no lead
+                lead.construtora = construtoraVal;
+                lead.project = projectVal;
+            }
+
             const stageId = document.getElementById('mv-stage-select').value;
             const stageName = PIPELINES[currentMoveTarget].find(s => s.id === stageId)?.title || stageId;
             const pipeNames = { leads: 'Pipeline de Leads', analise: 'Análise de Crédito' };
-            
+
             if(!confirm(`Mover "${lead.name}" para ${pipeNames[currentMoveTarget]} → ${stageName}?`)) return;
 
             executePipelineMove(lead, currentMoveTarget, null, stageId);
