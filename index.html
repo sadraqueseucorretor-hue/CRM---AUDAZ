@@ -720,11 +720,13 @@
     // Lead existente: preserva colunas imutaveis (so grava se estiver vazio)
     var existing = sheet.getRange(linha, 1, 1, row.length).getValues()[0];
     // Col B(1)=data, C(2)=mes, I(8)=dataAprovacao, J(9)=mesAprovacao, L(11)=dataGanho, M(12)=mesGanho
-    var imutaveis = [1, 2, 8, 9, 11, 12];
+    // Se cancelado: limpa Data/Mes Ganho (sai dos ganhos) e nao os preserva
+    var imutaveis = d.cancelado ? [1, 2, 8, 9] : [1, 2, 8, 9, 11, 12];
     for (var k = 0; k < imutaveis.length; k++) {
       var idx = imutaveis[k];
       if (existing[idx] && String(existing[idx]).trim() !== '') row[idx] = existing[idx];
     }
+    if (d.cancelado) { row[11] = ""; row[12] = ""; }
     sheet.getRange(linha, 1, 1, row.length).setValues([row]);
   }
   var sit = String(d.situacao || "");
@@ -1935,6 +1937,7 @@
                         dataGanho: ganho.data,
                         mesGanho: ganho.mes,
                         ganho: ehFin ? 'Sim' : (lead.pipeline === 'cancelados' ? 'Não' : ''),
+                        cancelado: lead.pipeline === 'cancelados',
                         situacao: situacaoAtual(lead),
                         vgv: ehFin ? (lead.vgv || 0) : '',
                         comissaoTotal: com ? com.bruta : '',
