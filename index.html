@@ -5687,6 +5687,12 @@ window.toggleSidebar = function() {
             
             lead.timeline.unshift(`[${t}] ${currentUser.name} CANCELOU o lead. Motivo: ${reason}${obs ? ' | Obs: ' + obs : ''}`);
 
+            // Garante que o cancelamento sempre chegue na planilha se o lead já estava lá
+            // (passou por Análise ou Ganhos) — fica vermelho + "Cancelado" como qualquer outro
+            if(['analise','financeiro'].includes(lead.previousPipeline) || lead.naPlanilha) {
+                lead.naPlanilha = true;
+            }
+
             saveLeadsDB();
             sincronizarPlanilha(lead); // → marca como Cancelado (vermelho) na planilha, se já estava lá
             closeModal('modal-cancel-lead');
