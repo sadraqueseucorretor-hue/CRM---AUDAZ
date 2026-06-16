@@ -3750,7 +3750,13 @@ window.toggleSidebar = function() {
             let base = getVisibleLeads().filter(l => l.pipeline === lead.pipeline && l.stageId === lead.stageId);
             // aplica os mesmos filtros do kanban, se a função existir
             try { base = applyKanbanFilters(base); } catch(e) {}
-            return base.sort((a,b) => (a.order||0) - (b.order||0));
+            // Mesma ordenação do kanban: urgência do follow-up (vencido/próximo no topo)
+            return base.sort((a, b) => {
+                const fa = a.followUp ? new Date(a.followUp).getTime() : Infinity;
+                const fb = b.followUp ? new Date(b.followUp).getTime() : Infinity;
+                if(fa !== fb) return fa - fb;
+                return (a.order||0) - (b.order||0);
+            });
         }
 
         // Navega para o lead anterior/próximo da mesma coluna
