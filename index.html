@@ -3301,7 +3301,14 @@ window.toggleSidebar = function() {
             
             PIPELINES[pipelineId].forEach(stage => {
                 let stageLeads = filteredLeads.filter(l => l.pipeline === pipelineId && l.stageId === stage.id);
-                stageLeads.sort((a, b) => (a.order || 0) - (b.order || 0));
+                // Ordena por urgência do follow-up: vencidos/mais próximos no topo,
+                // follow-up distante mais abaixo, e sem follow-up por último.
+                stageLeads.sort((a, b) => {
+                    const fa = a.followUp ? new Date(a.followUp).getTime() : Infinity;
+                    const fb = b.followUp ? new Date(b.followUp).getTime() : Infinity;
+                    if(fa !== fb) return fa - fb;
+                    return (a.order || 0) - (b.order || 0);
+                });
 
                 const totalIncome = stageLeads.reduce((s,l) => s + (Number(l.income) || 0), 0);
                 const totalVgv = stageLeads.reduce((s,l) => s + (Number(l.vgv) || Number(l.propertyValue) || 0), 0);
@@ -6179,6 +6186,8 @@ window.toggleSidebar = function() {
                     if(nameEl) nameEl.innerHTML = `${lead.numId ? '<span class="text-blue-400 text-lg align-middle mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${lead.name}${fuSpan}`;
                 }
                 showToast('Follow-up agendado: ' + _fuPickerDate.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}), 'success');
+                // Re-renderiza o kanban para reposicionar o card pela urgência do follow-up
+                if(['leads','analise','financeiro'].includes(currentView)) renderKanban(currentPipeline);
             }
             document.getElementById('fu-picker-popup').classList.add('hidden');
         };
