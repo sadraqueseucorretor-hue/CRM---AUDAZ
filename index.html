@@ -3638,7 +3638,7 @@ window.toggleSidebar = function() {
                     origin: document.getElementById('nl-origin').value,
                     income: document.getElementById('nl-income').value,
                     broker: leadBroker,
-                    followUp: (()=>{ const v = document.getElementById('nl-followUp')?.value; return v ? new Date(v).toISOString() : ''; })(),
+                    followUp: (()=>{ const v = document.getElementById('nl-followUp')?.value; return v ? new Date(v).toISOString() : new Date().toISOString(); })(),
                     pipeline: isDistribuir ? 'distribuicao' : 'leads',
                     stageId: isDistribuir ? 'a-distribuir' : 'aguardando',
                     order: 0,
