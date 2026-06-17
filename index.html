@@ -747,6 +747,26 @@
                                             </div>
                                             <textarea id="sheets-robo-code" readonly rows="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-[11px] text-green-300 font-mono leading-relaxed" spellcheck="false">function doPost(e) {
   var d = JSON.parse(e.postData.contents);
+
+  // >>> COLE SUA CHAVE SECRETA (Supabase: API Keys > Secret keys) NO LUGAR ABAIXO <<<
+  var SUPA_URL = "https://litiosaaclnqxxehhfvj.supabase.co";
+  var SUPA_SECRET = "COLE_AQUI_SUA_CHAVE_SECRETA";
+  var H = { apikey: SUPA_SECRET, Authorization: "Bearer " + SUPA_SECRET };
+  function acharUsuarioAuth(email) {
+    var r = UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users?per_page=1000", { headers: H, muteHttpExceptions: true });
+    var lista = (JSON.parse(r.getContentText()).users) || [];
+    for (var i = 0; i < lista.length; i++) { if (String(lista[i].email || "").toLowerCase() === String(email).toLowerCase()) return lista[i]; }
+    return null;
+  }
+  function definirSenha(email, senha) {
+    var u = acharUsuarioAuth(email);
+    if (u) {
+      UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users/" + u.id, { method: "put", contentType: "application/json", headers: H, payload: JSON.stringify({ password: senha, email_confirm: true }), muteHttpExceptions: true });
+    } else {
+      UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users", { method: "post", contentType: "application/json", headers: H, payload: JSON.stringify({ email: String(email).toLowerCase(), password: senha, email_confirm: true }), muteHttpExceptions: true });
+    }
+  }
+
   if (d.action === "enviarEmail") {
     var opts = { name: "CRM Audaz" };
     if (d.htmlMensagem) opts.htmlBody = d.htmlMensagem;
@@ -754,25 +774,19 @@
     return ContentService.createTextOutput(JSON.stringify({ok:true}));
   }
   if (d.action === "resetarSenha") {
-    // >>> COLE SUA CHAVE SECRETA (service_role / secret) DO SUPABASE AQUI <<<
-    var SUPA_URL = "https://litiosaaclnqxxehhfvj.supabase.co";
-    var SUPA_SECRET = "COLE_AQUI_SUA_CHAVE_SECRETA";
     var alvo = String(d.email || "").toLowerCase();
-    var H = { apikey: SUPA_SECRET, Authorization: "Bearer " + SUPA_SECRET };
-    var r = UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users?per_page=1000", { headers: H, muteHttpExceptions: true });
-    var lista = (JSON.parse(r.getContentText()).users) || [];
-    var u = null;
-    for (var i = 0; i < lista.length; i++) { if (String(lista[i].email || "").toLowerCase() === alvo) { u = lista[i]; break; } }
-    if (!u) { return ContentService.createTextOutput(JSON.stringify({ ok: false, msg: "email nao encontrado" })); }
+    if (!acharUsuarioAuth(alvo)) { return ContentService.createTextOutput(JSON.stringify({ ok: false, msg: "email nao encontrado" })); }
     var nova = "Audaz" + Math.floor(1000 + Math.random() * 9000);
-    UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users/" + u.id, {
-      method: "put", contentType: "application/json",
-      headers: H, payload: JSON.stringify({ password: nova, email_confirm: true }), muteHttpExceptions: true
-    });
+    definirSenha(alvo, nova);
     MailApp.sendEmail(alvo, "CRM Audaz — Recuperacao de senha",
       "Ola!\n\nSua senha temporaria de acesso ao CRM e:\n\n    " + nova +
       "\n\nEntre no sistema com ela e troque a senha no seu Perfil.\n\nSe voce nao solicitou, ignore este e-mail.\n\nEquipe CRM Audaz",
       { name: "CRM Audaz" });
+    return ContentService.createTextOutput(JSON.stringify({ ok: true }));
+  }
+  if (d.action === "definirSenhaUsuario") {
+    // Cria/atualiza a conta oficial com uma senha especifica (usado ao criar usuario ou trocar senha pelo painel)
+    definirSenha(String(d.email || "").toLowerCase(), String(d.senha || ""));
     return ContentService.createTextOutput(JSON.stringify({ ok: true }));
   }
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
@@ -2552,6 +2566,18 @@
             showLogin();
         }
 
+        // Cria/atualiza a senha OFICIAL (Supabase Auth) de um usuário, via robô do Google
+        function sincronizarSenhaOficial(email, senha) {
+            if(!email || !senha || !SHEETS_URL) return;
+            try {
+                fetch(SHEETS_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'definirSenhaUsuario', email: email, senha: senha })
+                });
+            } catch(_) {}
+        }
+
         // ====================================================================
         // RECUPERAÇÃO DE SENHA (envia senha temporária por email via robô Google)
         // ====================================================================
@@ -3861,21 +3887,31 @@ window.toggleSidebar = function() {
             }, 10);
         }
 
-        window.handlePasswordChange = function(e) {
+        window.handlePasswordChange = async function(e) {
             e.preventDefault();
             const current = document.getElementById('pwd-current').value;
             const newPwd = document.getElementById('pwd-new').value;
             const confirm = document.getElementById('pwd-confirm').value;
-            
+
             if(current !== currentUser.pass) { showToast('Senha atual incorreta', 'error'); return; }
             if(newPwd !== confirm) { showToast('Senhas não conferem', 'error'); return; }
             if(newPwd.length < 6) { showToast('A senha deve ter ao menos 6 caracteres', 'error'); return; }
-            
+
+            // Atualiza a senha OFICIAL (Supabase Auth) — o usuário está logado, então pode trocar a própria
+            try {
+                const { error } = await _sb.auth.updateUser({ password: newPwd });
+                if(error) throw error;
+            } catch(err) {
+                showToast('Não foi possível alterar a senha: ' + (err.message || ''), 'error');
+                return;
+            }
+
+            // Mantém o campo legado (tabela) em sincronia
             currentUser.pass = newPwd;
             const idx = DB.users.findIndex(u => u.id === currentUser.id);
             if(idx !== -1) { DB.users[idx] = currentUser; saveUsersDB(); }
             localStorage.setItem(DB_KEYS.LOGGED_USER, JSON.stringify(currentUser));
-            
+
             closeModal('modal-password');
             showToast('Senha atualizada com sucesso!', 'success');
             addNotification('Senha alterada com sucesso', 'info');
@@ -5187,7 +5223,7 @@ window.toggleSidebar = function() {
                 target.status = status;
                 target.goal = goal;
                 target.commission = commission;
-                if(pass) target.pass = pass;
+                if(pass) { target.pass = pass; sincronizarSenhaOficial(target.email, pass); }
                 if(photo !== undefined) target.photo = photo;
 
                 // Se renomeou, atualizar broker nos leads
@@ -5223,6 +5259,7 @@ window.toggleSidebar = function() {
                 };
                 DB.users.push(newUser);
                 saveUsersDB();
+                if(pass) sincronizarSenhaOficial(email, pass); // cria o acesso oficial (login) do novo usuário
                 triggerAutoSaveUI();
                 closeModal('modal-user');
                 renderUsersTable();
