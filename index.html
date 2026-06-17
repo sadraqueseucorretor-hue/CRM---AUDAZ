@@ -752,8 +752,9 @@
   var SUPA_URL = "https://litiosaaclnqxxehhfvj.supabase.co";
   var SUPA_SECRET = "COLE_AQUI_SUA_CHAVE_SECRETA";
   var H = { apikey: SUPA_SECRET, Authorization: "Bearer " + SUPA_SECRET };
+  function admUrl(path) { return SUPA_URL + path + (path.indexOf("?") >= 0 ? "&" : "?") + "apikey=" + encodeURIComponent(SUPA_SECRET); }
   function acharUsuarioAuth(email) {
-    var r = UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users?per_page=1000", { headers: H, muteHttpExceptions: true });
+    var r = UrlFetchApp.fetch(admUrl("/auth/v1/admin/users?per_page=1000"), { headers: H, muteHttpExceptions: true });
     var lista = (JSON.parse(r.getContentText()).users) || [];
     for (var i = 0; i < lista.length; i++) { if (String(lista[i].email || "").toLowerCase() === String(email).toLowerCase()) return lista[i]; }
     return null;
@@ -761,9 +762,9 @@
   function definirSenha(email, senha) {
     var u = acharUsuarioAuth(email);
     if (u) {
-      UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users/" + u.id, { method: "put", contentType: "application/json", headers: H, payload: JSON.stringify({ password: senha, email_confirm: true }), muteHttpExceptions: true });
+      UrlFetchApp.fetch(admUrl("/auth/v1/admin/users/" + u.id), { method: "put", contentType: "application/json", headers: H, payload: JSON.stringify({ password: senha, email_confirm: true }), muteHttpExceptions: true });
     } else {
-      UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users", { method: "post", contentType: "application/json", headers: H, payload: JSON.stringify({ email: String(email).toLowerCase(), password: senha, email_confirm: true }), muteHttpExceptions: true });
+      UrlFetchApp.fetch(admUrl("/auth/v1/admin/users"), { method: "post", contentType: "application/json", headers: H, payload: JSON.stringify({ email: String(email).toLowerCase(), password: senha, email_confirm: true }), muteHttpExceptions: true });
     }
   }
 
@@ -776,7 +777,7 @@
   if (d.action === "resetarSenha") {
     var alvo = String(d.email || "").toLowerCase();
     // Diagnostico: mostra o que o Supabase respondeu (status + qtd de usuarios)
-    var _dbg = UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users?per_page=1000", { headers: H, muteHttpExceptions: true });
+    var _dbg = UrlFetchApp.fetch(admUrl("/auth/v1/admin/users?per_page=1000"), { headers: H, muteHttpExceptions: true });
     var _code = _dbg.getResponseCode();
     var _body = _dbg.getContentText();
     var _lista = []; try { _lista = (JSON.parse(_body).users) || []; } catch (er) {}
