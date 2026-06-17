@@ -2093,7 +2093,7 @@
         // ====================================================================
         // 2. INICIALIZAÇÃO DO BANCO (Supabase)
         // ====================================================================
-        async function initDB() {
+        async function initDB(allowSeed = true) {
             // Carrega usuários da nova tabela "users" (1 linha por usuário)
             let loadedUsers = await loadUsersFromDB();
 
@@ -2110,7 +2110,7 @@
 
             if(loadedUsers && loadedUsers.length > 0) {
                 DB.users = loadedUsers;
-            } else {
+            } else if(allowSeed) {
                 DB.users = [
                     { id: 'u1', email: 'diretor@audaz.com', pass: '123456', name: 'Admin Audaz', role: 'Diretor', status: 'Ativo', phone: '', team: 'Diretoria', goal: 0, commission: 0, photo: null, lastAccess: null, createdAt: getDateStr() },
                     { id: 'u2', email: 'adm@audaz.com', pass: '123456', name: 'Operacional', role: 'Administrativo', status: 'Ativo', phone: '', team: 'Administrativo', goal: 0, commission: 0, photo: null, lastAccess: null, createdAt: getDateStr() },
@@ -2118,6 +2118,9 @@
                     { id: 'u4', email: 'corretor@audaz.com', pass: '123456', name: 'Carlos', role: 'Corretor', status: 'Ativo', phone: '', team: 'Equipe Centro', goal: 50000, commission: 3, photo: null, lastAccess: null, createdAt: getDateStr() }
                 ];
                 await _sb.from('users').upsert(DB.users.map(u => ({ id: u.id, data: u })), { onConflict: 'id' });
+            } else {
+                // Sem sessão oficial: não semeia nada (evita criar usuários de demonstração/backdoor)
+                DB.users = loadedUsers || [];
             }
 
             // Snapshot inicial dos usuários (referência para salvar só o que mudar)
@@ -2153,7 +2156,7 @@
 
             if(loadedLeads && loadedLeads.length > 0) {
                 DB.leads = loadedLeads;
-            } else if(!jaInicializado) {
+            } else if(allowSeed && !jaInicializado) {
                 // Primeira vez: cria os leads de demonstração
                 const t = getTime(); const d = getDateStr();
                 DB.leads = [
@@ -2170,7 +2173,7 @@
             }
 
             // Marca como inicializado (não re-semeia/re-migra nas próximas vezes)
-            if(!jaInicializado) { try { await dbSet(DB_KEYS.SEEDED, JSON.stringify(true)); } catch(e) {} }
+            if(allowSeed && !jaInicializado) { try { await dbSet(DB_KEYS.SEEDED, JSON.stringify(true)); } catch(e) {} }
 
             // Snapshot inicial dos leads
             _leadsSnapshot = _rebuildSnapshot(DB.leads);
@@ -2433,11 +2436,14 @@
         // 5. AUTENTICAÇÃO E SESSÃO
         // ====================================================================
         async function checkAuth() {
-            await initDB();
+            // Só retoma a sessão se houver login OFICIAL (Supabase Auth) ativo
+            let session = null;
+            try { const r = await _sb.auth.getSession(); session = r?.data?.session || null; } catch(_) {}
             const sessionActive = localStorage.getItem(DB_KEYS.SESSION);
             const loggedUserStr = localStorage.getItem(DB_KEYS.LOGGED_USER);
 
-            if (sessionActive === 'active' && loggedUserStr) {
+            if (session && sessionActive === 'active' && loggedUserStr) {
+                await initDB(true); // autenticado: carrega os dados de verdade
                 try {
                     const storedUser = JSON.parse(loggedUserStr);
                     const validUser = DB.users.find(u => u.email === storedUser.email);
@@ -2446,16 +2452,32 @@
                         localStorage.setItem(DB_KEYS.LOGGED_USER, JSON.stringify(currentUser));
                         const lastPage = localStorage.getItem(DB_KEYS.LAST_PAGE) || 'dashboard';
                         showApp(lastPage);
-                    } else handleLogout();
-                } catch(e) { handleLogout(); }
-            } else { showLogin(); }
+                    } else { forcarLoginLimpo(); }
+                } catch(e) { forcarLoginLimpo(); }
+            } else {
+                // Sem sessão oficial → vai pro login (não carrega dados sem autenticar)
+                forcarLoginLimpo();
+            }
+        }
+
+        // Limpa a sessão local e leva pra tela de login (sem o "deseja sair?")
+        function forcarLoginLimpo() {
+            try { _sb.auth.signOut(); } catch(_) {}
+            localStorage.removeItem(DB_KEYS.SESSION);
+            localStorage.removeItem(DB_KEYS.LOGGED_USER);
+            currentUser = null;
+            showLogin();
         }
 
         // ====================================================================
         // RECUPERAÇÃO DE SENHA (envia senha temporária por email via robô Google)
         // ====================================================================
-        window.abrirRecuperarSenha = function(e) {
+        window.abrirRecuperarSenha = async function(e) {
             if(e) e.preventDefault();
+            // Garante a lista de usuários carregada (na tela de login os dados podem não ter sido carregados)
+            if(!DB.users || DB.users.length === 0) {
+                try { const us = await loadUsersFromDB(); if(us) DB.users = us; } catch(_) {}
+            }
             const emailLogin = document.getElementById('login-email').value.trim();
             document.getElementById('rec-email').value = emailLogin;
             openModal('modal-recuperar-senha');
@@ -2528,7 +2550,10 @@
                 authOk = !error && !!data?.user;
             } catch(_) { authOk = false; }
 
-            // 2) Localiza o perfil do usuário; se o oficial falhou, tenta a RESERVA (login antigo)
+            // 2) Carrega os dados já autenticado (com RLS fechado, só funciona após o login oficial)
+            try { await initDB(authOk); } catch(_) {}
+
+            // 3) Localiza o perfil do usuário; se o oficial falhou, tenta a RESERVA (login antigo)
             let user = DB.users.find(u => (u.email||'').toLowerCase() === email);
             if(!authOk) {
                 user = DB.users.find(u => (u.email||'').toLowerCase() === email && u.pass === pass);
