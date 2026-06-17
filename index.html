@@ -236,10 +236,10 @@
                 <h3 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-key text-primary"></i> Recuperar Senha</h3>
                 <button onclick="closeModal('modal-recuperar-senha')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
             </div>
-            <p class="text-sm text-slate-400 mb-6">Digite seu e-mail cadastrado. Enviaremos um <b class="text-white">link para você redefinir a senha</b>.</p>
+            <p class="text-sm text-slate-400 mb-6">Digite seu e-mail cadastrado. Enviaremos uma <b class="text-white">senha temporária</b> para ele.</p>
             <input type="email" id="rec-email" class="w-full rounded-xl px-4 py-3 text-sm mb-4 bg-slate-900 border border-slate-700 text-white focus:border-primary focus:outline-none" placeholder="voce@audaz.com" autocomplete="email">
             <button onclick="enviarRecuperarSenha()" id="rec-btn" class="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl py-3 font-bold transition-all flex justify-center items-center gap-2">
-                <span>Enviar link de redefinição</span>
+                <span>Enviar senha temporária</span>
                 <div id="rec-loader" class="loader hidden"></div>
             </button>
             <p class="text-[11px] text-slate-500 mt-4 text-center">Não chegou? Verifique o spam ou peça ao Diretor para redefinir.</p>
@@ -752,6 +752,28 @@
     if (d.htmlMensagem) opts.htmlBody = d.htmlMensagem;
     MailApp.sendEmail(d.para, d.assunto, d.mensagem, opts);
     return ContentService.createTextOutput(JSON.stringify({ok:true}));
+  }
+  if (d.action === "resetarSenha") {
+    // >>> COLE SUA CHAVE SECRETA (service_role / secret) DO SUPABASE AQUI <<<
+    var SUPA_URL = "https://litiosaaclnqxxehhfvj.supabase.co";
+    var SUPA_SECRET = "COLE_AQUI_SUA_CHAVE_SECRETA";
+    var alvo = String(d.email || "").toLowerCase();
+    var H = { apikey: SUPA_SECRET, Authorization: "Bearer " + SUPA_SECRET };
+    var r = UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users?per_page=1000", { headers: H, muteHttpExceptions: true });
+    var lista = (JSON.parse(r.getContentText()).users) || [];
+    var u = null;
+    for (var i = 0; i < lista.length; i++) { if (String(lista[i].email || "").toLowerCase() === alvo) { u = lista[i]; break; } }
+    if (!u) { return ContentService.createTextOutput(JSON.stringify({ ok: false, msg: "email nao encontrado" })); }
+    var nova = "Audaz" + Math.floor(1000 + Math.random() * 9000);
+    UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users/" + u.id, {
+      method: "put", contentType: "application/json",
+      headers: H, payload: JSON.stringify({ password: nova, email_confirm: true }), muteHttpExceptions: true
+    });
+    MailApp.sendEmail(alvo, "CRM Audaz — Recuperacao de senha",
+      "Ola!\n\nSua senha temporaria de acesso ao CRM e:\n\n    " + nova +
+      "\n\nEntre no sistema com ela e troque a senha no seu Perfil.\n\nSe voce nao solicitou, ignore este e-mail.\n\nEquipe CRM Audaz",
+      { name: "CRM Audaz" });
+    return ContentService.createTextOutput(JSON.stringify({ ok: true }));
   }
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
   var ids = sheet.getRange("A:A").getValues();
@@ -2545,14 +2567,16 @@
             const loader = document.getElementById('rec-loader');
             btn.disabled = true; loader.classList.remove('hidden');
             try {
-                // Login oficial do Supabase envia o e-mail com link de redefinição
-                const redirect = window.location.origin + window.location.pathname;
-                const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: redirect });
-                if(error) throw error;
+                // O robô do Google redefine a senha oficial e envia a temporária pelo Gmail
+                await fetch(SHEETS_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'resetarSenha', email: email })
+                });
                 closeModal('modal-recuperar-senha');
-                showToast('Se o e-mail estiver cadastrado, enviamos um link para redefinir a senha. Verifique a caixa de entrada e o spam.', 'success');
+                showToast('Se o e-mail estiver cadastrado, enviamos uma senha temporária. Verifique a caixa de entrada e o spam.', 'success');
             } catch(err) {
-                showToast('Não foi possível enviar agora (limite de e-mails ou instabilidade). Tente em alguns minutos ou peça ao Diretor.', 'error');
+                showToast('Não foi possível enviar agora. Tente novamente ou peça ao Diretor.', 'error');
             } finally {
                 btn.disabled = false; loader.classList.add('hidden');
             }
