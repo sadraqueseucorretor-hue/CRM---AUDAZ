@@ -2501,56 +2501,67 @@
             }
         }
 
-        window.handleLogin = function(e) {
+        window.handleLogin = async function(e) {
             e.preventDefault();
             const email = document.getElementById('login-email').value.trim().toLowerCase();
             const pass = document.getElementById('login-password').value.trim();
             const btn = document.getElementById('btn-login');
             const loader = document.getElementById('login-loader');
-            
+
+            const falhar = (msg) => {
+                btn.querySelector('span').innerText = 'Entrar no Sistema';
+                loader.classList.add('hidden');
+                btn.disabled = false;
+                showToast(msg || 'E-mail ou senha incorretos.', 'error');
+                document.getElementById('form-login').classList.add('shake');
+                setTimeout(() => document.getElementById('form-login').classList.remove('shake'), 300);
+            };
+
             btn.querySelector('span').innerText = 'Autenticando...';
             loader.classList.remove('hidden');
             btn.disabled = true;
 
-            setTimeout(() => {
-                const user = DB.users.find(u => u.email === email && u.pass === pass);
-                btn.querySelector('span').innerText = 'Entrar no Sistema';
-                loader.classList.add('hidden');
-                btn.disabled = false;
+            // 1) Tenta o LOGIN OFICIAL (Supabase Auth) — abre uma sessão segura no banco
+            let authOk = false;
+            try {
+                const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
+                authOk = !error && !!data?.user;
+            } catch(_) { authOk = false; }
 
-                if (user) {
-                    if(user.status === 'Inativo') {
-                        showToast('Usuário inativo. Entre em contato com o administrador.', 'error');
-                        document.getElementById('form-login').classList.add('shake');
-                        setTimeout(() => document.getElementById('form-login').classList.remove('shake'), 300);
-                        return;
-                    }
-                    // Atualiza último acesso
-                    user.lastAccess = new Date().toISOString();
-                    saveUsersDB();
+            // 2) Localiza o perfil do usuário; se o oficial falhou, tenta a RESERVA (login antigo)
+            let user = DB.users.find(u => (u.email||'').toLowerCase() === email);
+            if(!authOk) {
+                user = DB.users.find(u => (u.email||'').toLowerCase() === email && u.pass === pass);
+            }
 
-                    currentUser = user;
-                    localStorage.setItem(DB_KEYS.SESSION, 'active');
-                    localStorage.setItem(DB_KEYS.LOGGED_USER, JSON.stringify(user));
-                    localStorage.setItem(DB_KEYS.LAST_PAGE, 'dashboard');
-                    showToast(`Bem-vindo, ${user.name}!`, 'success');
-                    addNotification(`Login realizado: ${user.name}`, 'success');
-                    showApp('dashboard');
-                } else {
-                    showToast('E-mail ou senha incorretos.', 'error');
-                    document.getElementById('form-login').classList.add('shake');
-                    setTimeout(() => document.getElementById('form-login').classList.remove('shake'), 300);
-                }
-            }, 600);
+            if (!user) { return falhar(); }
+            if(user.status === 'Inativo') { return falhar('Usuário inativo. Entre em contato com o administrador.'); }
+
+            btn.querySelector('span').innerText = 'Entrar no Sistema';
+            loader.classList.add('hidden');
+            btn.disabled = false;
+
+            // Atualiza último acesso
+            user.lastAccess = new Date().toISOString();
+            saveUsersDB();
+
+            currentUser = user;
+            localStorage.setItem(DB_KEYS.SESSION, 'active');
+            localStorage.setItem(DB_KEYS.LOGGED_USER, JSON.stringify(user));
+            localStorage.setItem(DB_KEYS.LAST_PAGE, 'dashboard');
+            showToast(`Bem-vindo, ${user.name}!`, 'success');
+            addNotification(`Login realizado: ${user.name}`, 'success');
+            showApp('dashboard');
         }
 
         window.handleLogout = function() {
             if(currentUser && !confirm('Deseja realmente sair do sistema?')) return;
+            try { _sb.auth.signOut(); } catch(_) {} // encerra a sessão oficial (Supabase Auth)
             localStorage.removeItem(DB_KEYS.SESSION);
             localStorage.removeItem(DB_KEYS.LOGGED_USER);
             localStorage.removeItem(DB_KEYS.LAST_PAGE);
-            currentUser = null; 
-            showToast('Sessão encerrada.', 'info'); 
+            currentUser = null;
+            showToast('Sessão encerrada.', 'info');
             showLogin();
         }
 
