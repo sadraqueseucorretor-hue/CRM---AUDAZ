@@ -3601,8 +3601,11 @@ window.toggleSidebar = function() {
         }
 
         function setupForms() {
-            document.getElementById('form-new-lead').addEventListener('submit', function(e) {
-                e.preventDefault(); 
+            const formNL = document.getElementById('form-new-lead');
+            if(formNL.dataset.bound === '1') return; // evita anexar o listener 2x (duplicação de leads)
+            formNL.dataset.bound = '1';
+            formNL.addEventListener('submit', function(e) {
+                e.preventDefault();
                 const t = getTime();
                 const phone = document.getElementById('nl-phone').value;
                 
