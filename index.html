@@ -5524,7 +5524,8 @@ window.toggleSidebar = function() {
                         <div class="flex-1 h-px bg-slate-700/50"></div>
                     </div>
                     ${msgs.map(m => {
-                        const time = new Date(m.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        const dt = new Date(m.timestamp);
+                        const time = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                         const initials = (m.author || '?').substring(0,2).toUpperCase();
                         const colorClass = roleColors[m.role] || 'from-slate-500 to-slate-600';
                         const isMe = m.authorId === currentUser?.id;
