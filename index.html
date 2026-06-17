@@ -236,10 +236,10 @@
                 <h3 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-key text-primary"></i> Recuperar Senha</h3>
                 <button onclick="closeModal('modal-recuperar-senha')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
             </div>
-            <p class="text-sm text-slate-400 mb-6">Digite seu e-mail cadastrado. Enviaremos um <b class="text-white">link para você criar uma nova senha</b>.</p>
+            <p class="text-sm text-slate-400 mb-6">Digite seu e-mail cadastrado. Enviaremos uma <b class="text-white">senha temporária</b> para ele.</p>
             <input type="email" id="rec-email" class="w-full rounded-xl px-4 py-3 text-sm mb-4 bg-slate-900 border border-slate-700 text-white focus:border-primary focus:outline-none" placeholder="voce@audaz.com" autocomplete="email">
             <button onclick="enviarRecuperarSenha()" id="rec-btn" class="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl py-3 font-bold transition-all flex justify-center items-center gap-2">
-                <span>Enviar link de redefinição</span>
+                <span>Enviar senha temporária</span>
                 <div id="rec-loader" class="loader hidden"></div>
             </button>
             <p class="text-[11px] text-slate-500 mt-4 text-center">Não chegou? Verifique o spam ou peça ao Diretor para redefinir.</p>
@@ -775,7 +775,14 @@
   }
   if (d.action === "resetarSenha") {
     var alvo = String(d.email || "").toLowerCase();
-    if (!acharUsuarioAuth(alvo)) { return ContentService.createTextOutput(JSON.stringify({ ok: false, msg: "email nao encontrado" })); }
+    // Diagnostico: mostra o que o Supabase respondeu (status + qtd de usuarios)
+    var _dbg = UrlFetchApp.fetch(SUPA_URL + "/auth/v1/admin/users?per_page=1000", { headers: H, muteHttpExceptions: true });
+    var _code = _dbg.getResponseCode();
+    var _body = _dbg.getContentText();
+    var _lista = []; try { _lista = (JSON.parse(_body).users) || []; } catch (er) {}
+    var u = null;
+    for (var _i = 0; _i < _lista.length; _i++) { if (String(_lista[_i].email || "").toLowerCase() === alvo) { u = _lista[_i]; break; } }
+    if (!u) { return ContentService.createTextOutput(JSON.stringify({ ok: false, msg: "email nao encontrado", httpStatus: _code, totalUsuarios: _lista.length, amostra: _body.substring(0, 200) })); }
     var nova = "Audaz" + Math.floor(1000 + Math.random() * 9000);
     definirSenha(alvo, nova);
     MailApp.sendEmail(alvo, "CRM Audaz — Recuperacao de senha",
@@ -2593,14 +2600,16 @@
             const loader = document.getElementById('rec-loader');
             btn.disabled = true; loader.classList.remove('hidden');
             try {
-                // Sistema oficial do Supabase envia o link de redefinição por e-mail
-                const redirect = window.location.origin + window.location.pathname;
-                const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: redirect });
-                if(error) throw error;
+                // O robô do Google redefine a senha oficial e envia a temporária pelo Gmail
+                await fetch(SHEETS_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'resetarSenha', email: email })
+                });
                 closeModal('modal-recuperar-senha');
-                showToast('Se o e-mail estiver cadastrado, enviamos um link para redefinir a senha. Verifique a caixa de entrada e o spam.', 'success');
+                showToast('Se o e-mail estiver cadastrado, enviamos uma senha temporária. Verifique a caixa de entrada e o spam.', 'success');
             } catch(err) {
-                showToast('Não foi possível enviar agora. Tente novamente em alguns minutos.', 'error');
+                showToast('Não foi possível enviar agora. Tente novamente ou peça ao Diretor.', 'error');
             } finally {
                 btn.disabled = false; loader.classList.add('hidden');
             }
