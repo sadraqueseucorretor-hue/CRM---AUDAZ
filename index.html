@@ -206,12 +206,11 @@
                 <h3 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-key text-primary"></i> Recuperar Senha</h3>
                 <button onclick="closeModal('modal-recuperar-senha')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
             </div>
-            <p class="text-sm text-slate-400 mb-6">Digite seu e-mail cadastrado. Enviaremos uma <b>senha temporária</b> para ele.</p>
-            <input type="email" id="rec-email" class="w-full rounded-xl px-4 py-3 text-sm mb-4 bg-slate-900 border border-slate-700 text-white focus:border-primary focus:outline-none" placeholder="voce@audaz.com" autocomplete="email">
-            <button onclick="enviarRecuperarSenha()" id="rec-btn" class="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl py-3 font-bold transition-all flex justify-center items-center gap-2">
-                <span>Enviar senha temporária</span>
-                <div id="rec-loader" class="loader hidden"></div>
-            </button>
+            <div class="bg-slate-900/60 border border-slate-700 rounded-xl p-4 mb-4">
+                <p class="text-sm text-slate-300 leading-relaxed"><i class="fa-solid fa-circle-info text-primary mr-1"></i> Por segurança, a redefinição de senha é feita pelo <b class="text-white">Diretor</b>.</p>
+                <p class="text-sm text-slate-400 mt-3">Entre em contato com o <b class="text-white">Sadraque</b> informando seu e-mail de acesso. Ele redefine na hora e te passa a nova senha.</p>
+            </div>
+            <button onclick="closeModal('modal-recuperar-senha')" class="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl py-3 font-bold transition-all">Entendi</button>
         </div>
     </div>
 
@@ -2472,14 +2471,8 @@
         // ====================================================================
         // RECUPERAÇÃO DE SENHA (envia senha temporária por email via robô Google)
         // ====================================================================
-        window.abrirRecuperarSenha = async function(e) {
+        window.abrirRecuperarSenha = function(e) {
             if(e) e.preventDefault();
-            // Garante a lista de usuários carregada (na tela de login os dados podem não ter sido carregados)
-            if(!DB.users || DB.users.length === 0) {
-                try { const us = await loadUsersFromDB(); if(us) DB.users = us; } catch(_) {}
-            }
-            const emailLogin = document.getElementById('login-email').value.trim();
-            document.getElementById('rec-email').value = emailLogin;
             openModal('modal-recuperar-senha');
         }
 
