@@ -236,11 +236,27 @@
                 <h3 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-key text-primary"></i> Recuperar Senha</h3>
                 <button onclick="closeModal('modal-recuperar-senha')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
             </div>
-            <div class="bg-slate-900/60 border border-slate-700 rounded-xl p-4 mb-4">
-                <p class="text-sm text-slate-300 leading-relaxed"><i class="fa-solid fa-circle-info text-primary mr-1"></i> Por segurança, a redefinição de senha é feita pelo <b class="text-white">Diretor</b>.</p>
-                <p class="text-sm text-slate-400 mt-3">Entre em contato com o <b class="text-white">Sadraque</b> informando seu e-mail de acesso. Ele redefine na hora e te passa a nova senha.</p>
-            </div>
-            <button onclick="closeModal('modal-recuperar-senha')" class="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl py-3 font-bold transition-all">Entendi</button>
+            <p class="text-sm text-slate-400 mb-6">Digite seu e-mail cadastrado. Enviaremos um <b class="text-white">link para você redefinir a senha</b>.</p>
+            <input type="email" id="rec-email" class="w-full rounded-xl px-4 py-3 text-sm mb-4 bg-slate-900 border border-slate-700 text-white focus:border-primary focus:outline-none" placeholder="voce@audaz.com" autocomplete="email">
+            <button onclick="enviarRecuperarSenha()" id="rec-btn" class="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl py-3 font-bold transition-all flex justify-center items-center gap-2">
+                <span>Enviar link de redefinição</span>
+                <div id="rec-loader" class="loader hidden"></div>
+            </button>
+            <p class="text-[11px] text-slate-500 mt-4 text-center">Não chegou? Verifique o spam ou peça ao Diretor para redefinir.</p>
+        </div>
+    </div>
+
+    <!-- MODAL: DEFINIR NOVA SENHA (após clicar no link do e-mail) -->
+    <div id="modal-nova-senha" class="fixed inset-0 bg-darker/95 backdrop-blur-md z-[300] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="glass-login rounded-2xl w-full max-w-md p-8">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2 mb-2"><i class="fa-solid fa-lock text-primary"></i> Definir Nova Senha</h3>
+            <p class="text-sm text-slate-400 mb-6">Crie sua nova senha de acesso (mínimo 6 caracteres).</p>
+            <input type="password" id="nova-senha-input" class="w-full rounded-xl px-4 py-3 text-sm mb-3 bg-slate-900 border border-slate-700 text-white focus:border-primary focus:outline-none" placeholder="Nova senha" autocomplete="new-password">
+            <input type="password" id="nova-senha-confirma" class="w-full rounded-xl px-4 py-3 text-sm mb-4 bg-slate-900 border border-slate-700 text-white focus:border-primary focus:outline-none" placeholder="Repita a nova senha" autocomplete="new-password">
+            <button onclick="salvarNovaSenha()" id="nova-senha-btn" class="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl py-3 font-bold transition-all flex justify-center items-center gap-2">
+                <span>Salvar nova senha</span>
+                <div id="nova-senha-loader" class="loader hidden"></div>
+            </button>
         </div>
     </div>
 
@@ -1624,6 +1640,15 @@
         const SUPABASE_KEY = 'sb_publishable_6x0C0Y8C4J1qpcwFU1FFIA_6I-8NiIZ';
         const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Quando o usuário volta do link de redefinição de senha (e-mail), abre o modal de nova senha
+        _sb.auth.onAuthStateChange((event) => {
+            if(event === 'PASSWORD_RECOVERY') {
+                try { document.getElementById('app-login').classList.remove('hidden'); document.getElementById('app-login').classList.remove('opacity-0'); } catch(_) {}
+                try { document.getElementById('app-crm').classList.add('hidden'); } catch(_) {}
+                if(typeof openModal === 'function') openModal('modal-nova-senha');
+            }
+        });
+
         async function dbGet(key) {
             const { data, error } = await _sb.from('crm_storage').select('value').eq('key', key).maybeSingle();
             if (error || !data) return null;
@@ -2467,6 +2492,11 @@
         // 5. AUTENTICAÇÃO E SESSÃO
         // ====================================================================
         async function checkAuth() {
+            // Link de redefinição de senha (vindo do e-mail): não mexe na sessão de recovery
+            if(window.location.hash && window.location.hash.indexOf('type=recovery') !== -1) {
+                showLogin();
+                return;
+            }
             // Só retoma a sessão se houver login OFICIAL (Supabase Auth) ativo
             let session = null;
             try { const r = await _sb.auth.getSession(); session = r?.data?.session || null; } catch(_) {}
@@ -2515,34 +2545,49 @@
             const loader = document.getElementById('rec-loader');
             btn.disabled = true; loader.classList.remove('hidden');
             try {
-                const user = DB.users.find(u => (u.email || '').toLowerCase() === email);
-                if(!user) {
-                    showToast('E-mail não encontrado no sistema.', 'error');
-                    return;
-                }
-                // Gera senha temporária legível
-                const tempPass = 'Audaz' + Math.floor(1000 + Math.random() * 9000);
-                user.pass = tempPass;
-                await saveUsersDB();
-                // Envia o email pelo robô do Google (mesma URL da planilha)
-                await fetch(SHEETS_URL, {
-                    method: 'POST', mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: 'enviarEmail',
-                        para: user.email,
-                        assunto: 'CRM Audaz — Recuperação de senha',
-                        mensagem: 'Olá, ' + user.name + '!\n\n' +
-                            'Sua senha temporária de acesso ao CRM é:\n\n' +
-                            '    ' + tempPass + '\n\n' +
-                            'Entre no sistema com ela e troque a senha no seu Perfil.\n\n' +
-                            'Se você não solicitou, ignore este e-mail.\n\nEquipe CRM Audaz'
-                    })
-                });
+                // Login oficial do Supabase envia o e-mail com link de redefinição
+                const redirect = window.location.origin + window.location.pathname;
+                const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: redirect });
+                if(error) throw error;
                 closeModal('modal-recuperar-senha');
-                showToast('Senha temporária enviada para ' + user.email + '. Verifique seu e-mail.', 'success');
+                showToast('Se o e-mail estiver cadastrado, enviamos um link para redefinir a senha. Verifique a caixa de entrada e o spam.', 'success');
             } catch(err) {
-                showToast('Erro ao enviar. Tente novamente.', 'error');
+                showToast('Não foi possível enviar agora (limite de e-mails ou instabilidade). Tente em alguns minutos ou peça ao Diretor.', 'error');
+            } finally {
+                btn.disabled = false; loader.classList.add('hidden');
+            }
+        }
+
+        // Salva a nova senha (após o usuário clicar no link do e-mail)
+        window.salvarNovaSenha = async function() {
+            const nova = document.getElementById('nova-senha-input').value;
+            const conf = document.getElementById('nova-senha-confirma').value;
+            if(!nova || nova.length < 6) { showToast('A senha precisa de pelo menos 6 caracteres.', 'error'); return; }
+            if(nova !== conf) { showToast('As senhas não conferem.', 'error'); return; }
+            const btn = document.getElementById('nova-senha-btn');
+            const loader = document.getElementById('nova-senha-loader');
+            btn.disabled = true; loader.classList.remove('hidden');
+            try {
+                const { error } = await _sb.auth.updateUser({ password: nova });
+                if(error) throw error;
+                // Sincroniza também na tabela users (campo legado) — sessão de recovery está autenticada
+                try {
+                    const { data: { user: au } } = await _sb.auth.getUser();
+                    const mail = (au?.email || '').toLowerCase();
+                    const us = await loadUsersFromDB();
+                    if(us) {
+                        const u = us.find(x => (x.email||'').toLowerCase() === mail);
+                        if(u) { u.pass = nova; await _sb.from('users').update({ data: u }).eq('id', u.id); }
+                    }
+                } catch(_) {}
+                await _sb.auth.signOut();
+                closeModal('modal-nova-senha');
+                showToast('Senha redefinida com sucesso! Entre com a nova senha.', 'success');
+                // Limpa o hash do link e mostra o login
+                try { history.replaceState(null, '', window.location.pathname); } catch(_) {}
+                showLogin();
+            } catch(err) {
+                showToast('Erro ao salvar a senha: ' + (err.message || ''), 'error');
             } finally {
                 btn.disabled = false; loader.classList.add('hidden');
             }
