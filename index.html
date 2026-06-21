@@ -168,6 +168,10 @@
         .filter-chip { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #93c5fd; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
         .filter-chip button { background: transparent; border: 0 !important; color: inherit; padding: 0; cursor: pointer; }
 
+        /* Scrollbar invisível (linha de badges do lead) */
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
         /* Tooltip */
         [data-tooltip] { position: relative; }
         [data-tooltip]:hover::after { content: attr(data-tooltip); position: absolute; bottom: -32px; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; white-space: nowrap; z-index: 1000; border: 1px solid #334155; }
@@ -1370,49 +1374,64 @@
     <div id="modal-lead-details" class="fixed inset-0 bg-darker/95 backdrop-blur-md z-[100] hidden flex items-end md:items-center justify-center opacity-0 transition-opacity duration-300">
         <div class="bg-panel border border-slate-700 shadow-2xl w-full max-w-[1280px] h-[95vh] md:h-[90vh] flex flex-col rounded-t-2xl md:rounded-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="modal-lead-details-content">
 
-            <div class="px-4 md:px-6 py-3 md:py-4 border-b border-slate-700 flex flex-wrap justify-between items-center gap-2 md:gap-4 bg-slate-900/80">
+            <div class="px-4 md:px-6 py-3 border-b border-slate-700/80 flex items-center gap-3 md:gap-4 bg-slate-900/90">
+
+                <!-- ESQUERDA: Avatar + Info -->
                 <div class="flex items-center gap-3 flex-1 min-w-0">
-                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-base md:text-lg font-bold text-white shadow-lg border-2 border-slate-700 flex-shrink-0" id="ld-avatar">JS</div>
+                    <!-- Avatar -->
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white ring-2 ring-slate-700 ring-offset-1 ring-offset-slate-900 flex-shrink-0" id="ld-avatar">JS</div>
+
+                    <!-- Info -->
                     <div class="flex-1 min-w-0">
-                        <h2 class="text-base md:text-xl font-bold text-white leading-snug" id="ld-name">Nome <span id="ld-temp" class="text-xs px-2.5 py-1 rounded-md font-bold uppercase tracking-wide">Hot</span></h2>
-                        <div class="flex items-center gap-2 md:gap-4 mt-2 md:mt-3 flex-wrap">
-                            <!-- Etapa editável compacta -->
-                            <div class="flex items-center gap-2">
-                                <span class="text-[11px] font-bold uppercase tracking-widest text-slate-500"><i class="fa-solid fa-flag mr-1 text-primary"></i> Etapa:</span>
-                                <select id="ld-stage-header" onchange="changeStageFromHeader()" class="bg-slate-800 border border-slate-700 text-white text-sm font-bold rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary cursor-pointer transition-all hover:border-primary"></select>
+                        <!-- Linha 1: Nome + badge follow-up -->
+                        <div class="flex items-center gap-2 min-w-0">
+                            <h2 class="text-sm md:text-base font-bold text-white leading-none truncate" id="ld-name">Nome <span id="ld-temp" class="text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider"></span></h2>
+                        </div>
+                        <!-- Linha 2: Etapa + Docs + Badges — tudo numa linha com scroll -->
+                        <div class="flex items-center gap-2 mt-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                            <select id="ld-stage-header" onchange="changeStageFromHeader()" class="flex-shrink-0 bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-md px-2.5 py-1 cursor-pointer hover:border-primary transition-colors focus:outline-none focus:ring-1 focus:ring-primary"></select>
+                            <div class="flex items-center gap-1.5 flex-shrink-0 text-slate-500">
+                                <i class="fa-solid fa-file-circle-check text-accent text-[10px]"></i>
+                                <div class="w-14 lead-progress-track flex-shrink-0"><div id="ld-progress-bar" class="lead-progress-fill progress-bar" style="width: 0%"></div></div>
+                                <span class="text-[11px] font-bold text-slate-400" id="ld-progress-text">0%</span>
                             </div>
-                            <!-- Progress bar do checklist (inline) -->
-                            <div class="flex items-center gap-2 min-w-[200px]">
-                                <span class="text-[11px] font-bold uppercase tracking-widest text-slate-500"><i class="fa-solid fa-file-circle-check mr-1 text-accent"></i> Docs:</span>
-                                <div class="flex-1 lead-progress-track"><div id="ld-progress-bar" class="lead-progress-fill progress-bar" style="width: 0%"></div></div>
-                                <span class="text-xs font-bold text-slate-300"><span id="ld-progress-text">0%</span></span>
-                            </div>
-                            <!-- Selects ocultos mantidos para compatibilidade -->
+                            <div class="w-px h-3.5 bg-slate-700 flex-shrink-0"></div>
+                            <span id="ld-pipeline-badge" class="hidden whitespace-nowrap">—</span>
+                            <span id="ld-broker-badge" class="hidden whitespace-nowrap">—</span>
+                            <span id="ld-construtora-badge" class="hidden whitespace-nowrap">—</span>
+                            <span id="ld-empreendimento-badge" class="hidden whitespace-nowrap">—</span>
+                            <!-- Compatibilidade -->
                             <select id="ld-pipeline-select" class="hidden"><option value="leads">Leads</option><option value="analise">Análise de Crédito</option><option value="financeiro">Ganhos / Financeiro</option></select>
                             <select id="ld-stage-select" class="hidden"></select>
                             <span id="ld-stage-badge" class="hidden">—</span>
                             <span id="ld-date" class="hidden">--</span>
                         </div>
-                        <!-- Badges: pipeline, corretor, construtora, empreendimento — sempre na mesma linha -->
-                        <div class="flex items-center gap-2 mt-2 flex-nowrap overflow-x-auto pb-1">
-                            <span id="ld-pipeline-badge" class="hidden whitespace-nowrap">—</span>
-                            <span id="ld-broker-badge" class="hidden whitespace-nowrap">—</span>
-                            <span id="ld-construtora-badge" class="hidden whitespace-nowrap">—</span>
-                            <span id="ld-empreendimento-badge" class="hidden whitespace-nowrap">—</span>
-                        </div>
                     </div>
                 </div>
-                <div class="flex gap-1 md:gap-2 items-center flex-shrink-0 flex-wrap justify-end">
-                    <div class="flex items-center gap-1 mr-1">
-                        <button onclick="navegarLead('prev')" id="ld-nav-prev" title="Lead anterior da coluna" class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-primary/30 text-slate-300 hover:text-white transition-colors"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-                        <span id="ld-nav-pos" class="text-[10px] text-slate-500 font-bold min-w-[34px] text-center"></span>
-                        <button onclick="navegarLead('next')" id="ld-nav-next" title="Próximo lead da coluna" class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-primary/30 text-slate-300 hover:text-white transition-colors"><i class="fa-solid fa-chevron-right text-xs"></i></button>
-                    </div>
-                    <button id="ld-move-btn" onclick="openMoveClientModal()" class="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg shadow-purple-500/30 flex items-center gap-2"><i class="fa-solid fa-arrow-right-arrow-left"></i> <span class="hidden xl:inline">Mover Cliente</span></button>
-                    <button id="ld-whatsapp-btn" onclick="openWhatsApp()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-emerald-600/20 flex items-center gap-2"><i class="fa-brands fa-whatsapp text-lg"></i> <span class="hidden xl:inline">Conversar</span></button>
-                    <button id="ld-cancel-btn" onclick="openCancelLeadModal()" class="bg-red-600/20 hover:bg-red-600/40 text-red-300 px-3 py-2.5 rounded-lg transition-colors border border-red-600/30 flex items-center gap-2" data-tooltip="Cancelar Lead"><i class="fa-solid fa-ban"></i> <span class="hidden xl:inline text-xs font-bold">Cancelar</span></button>
-                    <button onclick="deleteLead()" id="ld-delete-btn" class="bg-red-700/20 hover:bg-red-700/40 text-red-400 px-3 py-2.5 rounded-lg transition-colors border border-red-700/30 hidden" data-tooltip="Excluir permanentemente (Diretor)"><i class="fa-solid fa-trash"></i></button>
-                    <button onclick="closeModal('modal-lead-details')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-lg transition-colors"><i class="fa-solid fa-times text-lg"></i></button>
+
+                <!-- DIREITA: Navegação + Ações -->
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <!-- Navegação entre leads -->
+                    <button onclick="navegarLead('prev')" id="ld-nav-prev" title="Lead anterior" class="w-7 h-7 flex items-center justify-center rounded-md text-slate-500 hover:text-white hover:bg-slate-700 transition-colors"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                    <span id="ld-nav-pos" class="text-[10px] text-slate-600 font-bold min-w-[28px] text-center tabular-nums"></span>
+                    <button onclick="navegarLead('next')" id="ld-nav-next" title="Próximo lead" class="w-7 h-7 flex items-center justify-center rounded-md text-slate-500 hover:text-white hover:bg-slate-700 transition-colors"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+
+                    <!-- Separador -->
+                    <div class="w-px h-5 bg-slate-700 mx-1.5"></div>
+
+                    <!-- Ações principais -->
+                    <button id="ld-move-btn" onclick="openMoveClientModal()" class="h-8 px-3 bg-violet-600/80 hover:bg-violet-600 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-arrow-right-arrow-left text-[10px]"></i><span class="hidden md:inline">Mover</span></button>
+                    <button id="ld-whatsapp-btn" onclick="openWhatsApp()" class="h-8 px-3 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 whitespace-nowrap"><i class="fa-brands fa-whatsapp text-sm"></i><span class="hidden md:inline">Conversar</span></button>
+
+                    <!-- Separador -->
+                    <div class="w-px h-5 bg-slate-700 mx-1.5"></div>
+
+                    <!-- Ações destrutivas (discretas) -->
+                    <button id="ld-cancel-btn" onclick="openCancelLeadModal()" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors" data-tooltip="Cancelar lead"><i class="fa-solid fa-ban text-sm"></i></button>
+                    <button onclick="deleteLead()" id="ld-delete-btn" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-colors hidden" data-tooltip="Excluir permanentemente"><i class="fa-solid fa-trash text-sm"></i></button>
+
+                    <!-- Fechar -->
+                    <button onclick="closeModal('modal-lead-details')" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-white hover:bg-slate-700 transition-colors ml-0.5"><i class="fa-solid fa-times"></i></button>
                 </div>
             </div>
 
