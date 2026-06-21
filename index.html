@@ -1383,9 +1383,10 @@
 
                     <!-- Info -->
                     <div class="flex-1 min-w-0">
-                        <!-- Linha 1: Nome + badge follow-up -->
-                        <div class="flex items-center gap-2 min-w-0">
+                        <!-- Linha 1: Nome + copiar + badge follow-up -->
+                        <div class="flex items-center gap-1.5 min-w-0">
                             <h2 class="text-sm md:text-base font-bold text-white leading-none truncate" id="ld-name">Nome <span id="ld-temp" class="text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider"></span></h2>
+                            <button onclick="copiarNomeCliente(event)" id="ld-copy-name" title="Copiar nome do cliente" class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-slate-500 hover:text-white hover:bg-slate-700 transition-colors"><i class="fa-regular fa-copy text-[11px]"></i></button>
                         </div>
                         <!-- Linha 2: Etapa + Docs + Badges — tudo numa linha com scroll -->
                         <div class="flex items-center gap-2 mt-1.5 overflow-x-auto pb-0.5 scrollbar-none">
@@ -3999,6 +4000,34 @@ window.toggleSidebar = function() {
                 if(fa !== fb) return fa - fb;
                 return (a.order||0) - (b.order||0);
             });
+        }
+
+        // Copia o nome do cliente do lead aberto para a área de transferência
+        window.copiarNomeCliente = function(e) {
+            if(e) e.stopPropagation();
+            const id = document.getElementById('ld-id').value;
+            const lead = DB.leads.find(l => l.id === id);
+            const nome = (lead?.name || document.getElementById('ld-clientname')?.value || '').trim();
+            if(!nome) { showToast('Nome do cliente vazio.', 'warning'); return; }
+            const feedback = () => {
+                showToast('Nome copiado: ' + nome, 'success');
+                const btn = document.getElementById('ld-copy-name');
+                if(btn) {
+                    const icon = btn.querySelector('i');
+                    if(icon) { icon.className = 'fa-solid fa-check text-[11px] text-emerald-400'; setTimeout(() => { icon.className = 'fa-regular fa-copy text-[11px]'; }, 1500); }
+                }
+            };
+            if(navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(nome).then(feedback).catch(() => {
+                    const t = document.createElement('textarea'); t.value = nome; document.body.appendChild(t); t.select();
+                    try { document.execCommand('copy'); feedback(); } catch(_) { showToast('Não foi possível copiar.', 'error'); }
+                    document.body.removeChild(t);
+                });
+            } else {
+                const t = document.createElement('textarea'); t.value = nome; document.body.appendChild(t); t.select();
+                try { document.execCommand('copy'); feedback(); } catch(_) { showToast('Não foi possível copiar.', 'error'); }
+                document.body.removeChild(t);
+            }
         }
 
         // Navega para o lead anterior/próximo — usa a SEQUÊNCIA CONGELADA (não recalcula)
