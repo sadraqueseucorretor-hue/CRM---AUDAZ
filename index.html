@@ -2626,16 +2626,7 @@
             try {
                 const { error } = await _sb.auth.updateUser({ password: nova });
                 if(error) throw error;
-                // Sincroniza também na tabela users (campo legado) — sessão de recovery está autenticada
-                try {
-                    const { data: { user: au } } = await _sb.auth.getUser();
-                    const mail = (au?.email || '').toLowerCase();
-                    const us = await loadUsersFromDB();
-                    if(us) {
-                        const u = us.find(x => (x.email||'').toLowerCase() === mail);
-                        if(u) { u.pass = nova; await _sb.from('users').update({ data: u }).eq('id', u.id); }
-                    }
-                } catch(_) {}
+                // Senha gerenciada exclusivamente pelo Supabase Auth — não grava em texto plano
                 await _sb.auth.signOut();
                 closeModal('modal-nova-senha');
                 showToast('Senha redefinida com sucesso! Entre com a nova senha.', 'success');
@@ -2669,21 +2660,21 @@
             loader.classList.remove('hidden');
             btn.disabled = true;
 
-            // 1) Tenta o LOGIN OFICIAL (Supabase Auth) — abre uma sessão segura no banco
+            // 1) LOGIN OFICIAL (Supabase Auth) — ÚNICO método aceito. Sem fallback.
             let authOk = false;
             try {
                 const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
                 authOk = !error && !!data?.user;
             } catch(_) { authOk = false; }
 
-            // 2) Carrega os dados já autenticado (com RLS fechado, só funciona após o login oficial)
-            try { await initDB(authOk); } catch(_) {}
+            // Se o Auth oficial falhou, nega o acesso imediatamente
+            if(!authOk) { return falhar('E-mail ou senha incorretos.'); }
 
-            // 3) Localiza o perfil do usuário; se o oficial falhou, tenta a RESERVA (login antigo)
+            // 2) Carrega os dados (RLS garante que só funciona com sessão Supabase válida)
+            try { await initDB(true); } catch(_) {}
+
+            // 3) Localiza o perfil do usuário na tabela users
             let user = DB.users.find(u => (u.email||'').toLowerCase() === email);
-            if(!authOk) {
-                user = DB.users.find(u => (u.email||'').toLowerCase() === email && u.pass === pass);
-            }
 
             if (!user) { return falhar(); }
             if(user.status === 'Inativo') { return falhar('Usuário inativo. Entre em contato com o administrador.'); }
@@ -2722,9 +2713,8 @@
             else { input.type = 'password'; icon.classList.replace('fa-eye-slash','fa-eye'); }
         }
 
-        window.fillLogin = function(email) { 
-            document.getElementById('login-email').value = email; 
-            document.getElementById('login-password').value = '123456'; 
+        window.fillLogin = function(email) {
+            document.getElementById('login-email').value = email;
         }
 
         function showLogin() {
