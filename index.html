@@ -4390,7 +4390,11 @@ window.toggleSidebar = function() {
                 }
                 try {
                     showToast(`Enviando ${file.name}...`, 'info');
-                    const filePath = `leads/${lead.id}/${generateId()}_${file.name}`;
+                    // Nome seguro para o Storage: tira acentos, espaços e caracteres especiais
+                    const nomeSeguro = file.name
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // remove acentos
+                        .replace(/[^a-zA-Z0-9._-]/g, '_');                  // troca o resto por _
+                    const filePath = `leads/${lead.id}/${generateId()}_${nomeSeguro}`;
                     const { data, error } = await _sb.storage.from('crm-files').upload(filePath, file, { upsert: false });
                     if(error) throw error;
                     const { data: urlData } = _sb.storage.from('crm-files').getPublicUrl(filePath);
