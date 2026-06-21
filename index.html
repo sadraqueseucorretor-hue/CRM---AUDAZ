@@ -1424,7 +1424,7 @@
 
                     <!-- Ações destrutivas (discretas) -->
                     <button id="ld-cancel-btn" onclick="openCancelLeadModal()" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors" data-tooltip="Cancelar lead"><i class="fa-solid fa-ban text-sm"></i></button>
-                    <button onclick="deleteLead()" id="ld-delete-btn" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-colors hidden" data-tooltip="Excluir permanentemente"><i class="fa-solid fa-trash text-sm"></i></button>
+                    <div id="ld-delete-btn" class="hidden"></div>
 
                     <!-- Fechar -->
                     <button onclick="closeModal('modal-lead-details')" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-white hover:bg-slate-700 transition-colors ml-0.5"><i class="fa-solid fa-times"></i></button>
@@ -4305,11 +4305,7 @@ window.toggleSidebar = function() {
                     if(!canCancelLead(lead)) cancelBtn.classList.add('hidden');
                 }
             }
-            // Exclusão definitiva apenas para Diretor
-            if(deleteBtn) {
-                if(currentUser.role === 'Diretor') deleteBtn.classList.remove('hidden');
-                else deleteBtn.classList.add('hidden');
-            }
+            // Exclusão definitiva removida do modal — somente via tela de Cancelados (Diretor)
             
             atualizarNavLead(lead); // setas de navegação entre leads da coluna
 
@@ -6074,10 +6070,21 @@ window.toggleSidebar = function() {
                         <div class="flex items-center justify-end gap-1">
                             <button onclick="openLeadDetails('${l.id}')" title="Ver detalhes" class="p-2 rounded-lg hover:bg-blue-500/20 text-blue-300 transition-colors"><i class="fa-solid fa-eye"></i></button>
                             ${canReactivate ? `<button onclick="reactivateLead('${l.id}')" title="Reativar lead" class="p-2 rounded-lg hover:bg-emerald-500/20 text-emerald-300 transition-colors"><i class="fa-solid fa-rotate-left"></i></button>` : ''}
+                            ${currentUser.role === 'Diretor' ? `<button onclick="excluirCanceladoPermanente('${l.id}', '${(l.name||'').replace(/'/g,"\\'")}') " title="Excluir permanentemente" class="p-2 rounded-lg hover:bg-red-500/20 text-slate-600 hover:text-red-400 transition-colors"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}
                         </div>
                     </td>
                 </tr>`;
             }).join('');
+        }
+
+        // Exclusão permanente de lead cancelado — somente Diretor
+        window.excluirCanceladoPermanente = function(id, nome) {
+            if(currentUser.role !== 'Diretor') { showToast('Apenas o Diretor pode excluir permanentemente.', 'error'); return; }
+            if(!confirm(`Excluir permanentemente "${nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
+            DB.leads = DB.leads.filter(l => l.id !== id);
+            saveLeadsDB();
+            showToast(`Lead "${nome}" excluído permanentemente.`, 'success');
+            renderCancelados();
         }
 
         // ====================================================================
