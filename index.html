@@ -1684,12 +1684,27 @@
         const SUPABASE_KEY = 'sb_publishable_6x0C0Y8C4J1qpcwFU1FFIA_6I-8NiIZ';
         const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Quando o usuário volta do link de redefinição de senha (e-mail), abre o modal de nova senha
+        // Flag para distinguir logout voluntário ("Sair") de sessão expirada
+        let _logoutIntencional = false;
+
+        // Listener de estado da autenticação
         _sb.auth.onAuthStateChange((event) => {
+            // Usuário voltou do link de redefinição de senha por e-mail
             if(event === 'PASSWORD_RECOVERY') {
                 try { document.getElementById('app-login').classList.remove('hidden'); document.getElementById('app-login').classList.remove('opacity-0'); } catch(_) {}
                 try { document.getElementById('app-crm').classList.add('hidden'); } catch(_) {}
                 if(typeof openModal === 'function') openModal('modal-nova-senha');
+            }
+            // Sessão encerrada (token expirado ou refresh falhou) — só age se NÃO foi logout voluntário
+            if(event === 'SIGNED_OUT' && !_logoutIntencional && currentUser) {
+                localStorage.removeItem(DB_KEYS.SESSION);
+                localStorage.removeItem(DB_KEYS.LOGGED_USER);
+                currentUser = null;
+                if(typeof showLogin === 'function') showLogin();
+                setTimeout(() => {
+                    if(typeof showToast === 'function')
+                        showToast('Sua sessão expirou. Faça login novamente.', 'warning');
+                }, 400);
             }
         });
 
@@ -2567,6 +2582,7 @@
 
         // Limpa a sessão local e leva pra tela de login (sem o "deseja sair?")
         function forcarLoginLimpo() {
+            _logoutIntencional = true;
             try { _sb.auth.signOut(); } catch(_) {}
             localStorage.removeItem(DB_KEYS.SESSION);
             localStorage.removeItem(DB_KEYS.LOGGED_USER);
@@ -2627,6 +2643,7 @@
                 const { error } = await _sb.auth.updateUser({ password: nova });
                 if(error) throw error;
                 // Senha gerenciada exclusivamente pelo Supabase Auth — não grava em texto plano
+                _logoutIntencional = true;
                 await _sb.auth.signOut();
                 closeModal('modal-nova-senha');
                 showToast('Senha redefinida com sucesso! Entre com a nova senha.', 'success');
@@ -2698,6 +2715,7 @@
 
         window.handleLogout = function() {
             if(currentUser && !confirm('Deseja realmente sair do sistema?')) return;
+            _logoutIntencional = true;
             try { _sb.auth.signOut(); } catch(_) {} // encerra a sessão oficial (Supabase Auth)
             localStorage.removeItem(DB_KEYS.SESSION);
             localStorage.removeItem(DB_KEYS.LOGGED_USER);
