@@ -4448,7 +4448,8 @@ window.toggleSidebar = function() {
                             </div>
                         </div>
                         <div class="flex gap-2">
-                            <a href="${file.url || file.data}" target="_blank" download="${file.name}" class="flex-1 bg-slate-700 hover:bg-primary/20 hover:text-primary text-slate-300 text-xs font-bold py-2 rounded transition-colors text-center"><i class="fa-solid fa-download"></i> Baixar</a>
+                            <a href="${src}" target="_blank" rel="noopener" class="flex-1 bg-primary/20 hover:bg-primary text-primary hover:text-white text-xs font-bold py-2 rounded transition-colors text-center"><i class="fa-solid fa-eye"></i> Visualizar</a>
+                            <a href="${src}" download="${file.name}" class="flex-1 bg-slate-700 hover:bg-slate-600 hover:text-white text-slate-300 text-xs font-bold py-2 rounded transition-colors text-center"><i class="fa-solid fa-download"></i> Baixar</a>
                             <button onclick="deleteFile('${file.id}')" class="px-3 bg-slate-700 hover:bg-red-500/20 hover:text-red-400 text-slate-300 text-xs font-bold rounded transition-colors"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
