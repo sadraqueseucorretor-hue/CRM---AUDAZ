@@ -1390,11 +1390,7 @@
                         <!-- Linha 2: Etapa + Docs + Badges — tudo numa linha com scroll -->
                         <div class="flex items-center gap-2 mt-1.5 overflow-x-auto pb-0.5 scrollbar-none">
                             <select id="ld-stage-header" onchange="changeStageFromHeader()" class="flex-shrink-0 bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-md px-2.5 py-1 cursor-pointer hover:border-primary transition-colors focus:outline-none focus:ring-1 focus:ring-primary"></select>
-                            <div class="flex items-center gap-1.5 flex-shrink-0 text-slate-500">
-                                <i class="fa-solid fa-file-circle-check text-accent text-[10px]"></i>
-                                <div class="w-14 lead-progress-track flex-shrink-0"><div id="ld-progress-bar" class="lead-progress-fill progress-bar" style="width: 0%"></div></div>
-                                <span class="text-[11px] font-bold text-slate-400" id="ld-progress-text">0%</span>
-                            </div>
+                            <div class="hidden"><div id="ld-progress-bar" class="lead-progress-fill progress-bar" style="width: 0%"></div><span id="ld-progress-text">0%</span></div>
                             <div class="w-px h-3.5 bg-slate-700 flex-shrink-0"></div>
                             <span id="ld-pipeline-badge" class="hidden whitespace-nowrap">—</span>
                             <span id="ld-broker-badge" class="hidden whitespace-nowrap">—</span>
