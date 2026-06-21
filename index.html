@@ -3973,6 +3973,16 @@ window.toggleSidebar = function() {
             document.getElementById(`tab-${tabName}`).classList.add('active');
         }
 
+        // Sequência de navegação CONGELADA: lista de IDs capturada ao abrir um lead fresco.
+        // A ordenação do kanban pode mudar em tempo real, mas a navegação Anterior/Próximo
+        // segue esta lista até o usuário abrir outro lead direto do kanban ou recarregar.
+        let _navSequence = [];
+
+        // Resolve os IDs congelados em objetos de lead (ignora os que não existem mais)
+        function _navColResolved() {
+            return _navSequence.map(id => DB.leads.find(l => l.id === id)).filter(Boolean);
+        }
+
         // Retorna os leads da mesma coluna (mesmo pipeline + etapa) que o lead, na ordem do kanban
         function leadsNaColuna(lead) {
             if(!lead) return [];
@@ -3991,25 +4001,31 @@ window.toggleSidebar = function() {
             });
         }
 
-        // Navega para o lead anterior/próximo da mesma coluna
+        // Navega para o lead anterior/próximo — usa a SEQUÊNCIA CONGELADA (não recalcula)
         window.navegarLead = function(dir) {
             const id = document.getElementById('ld-id').value;
             const atual = DB.leads.find(l => l.id === id);
             if(!atual) return;
-            const col = leadsNaColuna(atual);
-            const idx = col.findIndex(l => l.id === id);
+            let col = _navColResolved();
+            let idx = col.findIndex(l => l.id === id);
+            // Se o lead atual saiu da sequência congelada (raro), reccongelar a partir da coluna atual
+            if(idx === -1) {
+                _navSequence = leadsNaColuna(atual).map(l => l.id);
+                col = _navColResolved();
+                idx = col.findIndex(l => l.id === id);
+            }
             if(idx === -1) return;
             const novoIdx = dir === 'next' ? idx + 1 : idx - 1;
             if(novoIdx < 0 || novoIdx >= col.length) {
-                showToast(dir === 'next' ? 'Último lead da coluna.' : 'Primeiro lead da coluna.', 'info');
+                showToast(dir === 'next' ? 'Último lead da sequência.' : 'Primeiro lead da sequência.', 'info');
                 return;
             }
-            openLeadDetails(col[novoIdx].id);
+            openLeadDetails(col[novoIdx].id, true); // true = veio da navegação, mantém a sequência
         }
 
-        // Atualiza os botões de navegação (posição X/Y e habilita/desabilita)
+        // Atualiza os botões de navegação (posição X/Y e habilita/desabilita) — usa sequência congelada
         function atualizarNavLead(lead) {
-            const col = leadsNaColuna(lead);
+            const col = _navColResolved();
             const idx = col.findIndex(l => l.id === lead.id);
             const pos = document.getElementById('ld-nav-pos');
             const prev = document.getElementById('ld-nav-prev');
@@ -4119,10 +4135,16 @@ window.toggleSidebar = function() {
             showToast('Recebimento removido.', 'info');
         }
 
-        window.openLeadDetails = function(id) {
+        window.openLeadDetails = function(id, fromNav) {
             const lead = DB.leads.find(l => l.id === id);
             if(!lead) return;
-            
+
+            // Abertura FRESCA (do kanban, busca, etc.): congela a sequência de navegação agora.
+            // Abertura via Anterior/Próximo (fromNav=true): mantém a sequência já congelada.
+            if(!fromNav) {
+                _navSequence = leadsNaColuna(lead).map(l => l.id);
+            }
+
             document.getElementById('ld-id').value = lead.id;
             document.getElementById('ld-date').innerText = lead.date || getDateStr();
             
