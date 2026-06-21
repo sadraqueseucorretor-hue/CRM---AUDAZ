@@ -1461,7 +1461,7 @@
                                         <div><label class="text-slate-500 text-xs font-semibold uppercase">CPF</label><input type="text" id="ld-cpf" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead cpf-mask" maxlength="14" placeholder="000.000.000-00"></div>
                                         <div><label class="text-slate-500 text-xs font-semibold uppercase">Telefone / WhatsApp</label><input type="text" id="ld-phone" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead phone-mask" maxlength="15"></div>
                                         <div><label class="text-slate-500 text-xs font-semibold uppercase">E-mail</label><input type="email" id="ld-email" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"></div>
-                                        <div><label class="text-slate-500 text-xs font-semibold uppercase">Cidade</label><input type="text" id="ld-city" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead"></div>
+                                        <input type="hidden" id="ld-city">
                                     </div>
                                 </div>
 
@@ -1609,26 +1609,30 @@
                             </div>
                         </div>
 
-                        <!-- MENSAGENS — agora dentro da página principal do lead -->
-                        <div class="glass rounded-xl border border-slate-700/50 overflow-hidden mt-8">
-                            <div class="px-6 py-4 border-b border-slate-700 bg-slate-900/60 flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <i class="fa-solid fa-comments text-emerald-400 text-xl"></i>
-                                    <div>
-                                        <h4 class="text-sm font-bold text-white">Mensagens da Equipe</h4>
-                                        <p class="text-[11px] text-slate-500">Conversa operacional. Salvo permanentemente em tempo real.</p>
+                        <!-- MENSAGENS DA EQUIPE -->
+                        <div class="rounded-2xl border border-slate-700/60 overflow-hidden mt-6" style="background:rgba(15,23,42,0.5)">
+                            <!-- Header -->
+                            <div class="px-5 py-3 border-b border-slate-700/60 flex items-center justify-between bg-slate-900/60">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                                        <i class="fa-solid fa-comments text-emerald-400 text-xs"></i>
                                     </div>
+                                    <span class="text-sm font-bold text-white">Mensagens da Equipe</span>
                                 </div>
-                                <span id="ld-messages-count" class="text-xs font-bold bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30">0 mensagens</span>
+                                <span id="ld-messages-count" class="text-[11px] font-bold text-slate-500">0 mensagens</span>
                             </div>
-                            <div id="ld-messages-list" class="p-6 max-h-[420px] overflow-y-auto custom-scrollbar space-y-4 bg-slate-900/20"></div>
-                            <div class="p-5 border-t border-slate-700 bg-slate-900/60">
-                                <label class="block text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2"><i class="fa-solid fa-pen text-primary mr-1"></i> Nova mensagem ou observação</label>
-                                <textarea id="ld-new-message" rows="3" placeholder="Digite uma observação operacional, pendência, retorno do cliente, instrução para a equipe..." class="w-full rounded-lg px-4 py-3 text-sm resize-none"></textarea>
-                                <div class="flex justify-between items-center mt-3">
-                                    <p class="text-[11px] text-slate-500"><i class="fa-solid fa-circle-info"></i> Visível para toda a equipe. <kbd class="bg-slate-800 border border-slate-600 rounded px-1.5 py-0.5 text-[10px] font-mono">Ctrl + Enter</kbd> para enviar.</p>
-                                    <button onclick="addLeadMessage()" class="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2"><i class="fa-solid fa-paper-plane"></i> Enviar Mensagem</button>
+                            <!-- Lista de mensagens -->
+                            <div id="ld-messages-list" class="px-4 py-4 max-h-[380px] overflow-y-auto custom-scrollbar space-y-3"></div>
+                            <!-- Input -->
+                            <div class="px-4 pb-4 pt-3 border-t border-slate-700/60 bg-slate-900/40">
+                                <div class="flex gap-2 items-end">
+                                    <textarea id="ld-new-message" rows="2" placeholder="Observação, pendência, retorno do cliente..." class="flex-1 rounded-xl px-3 py-2.5 text-sm resize-none border border-slate-700 bg-slate-800/60 focus:border-emerald-500/50 focus:outline-none text-slate-200 placeholder-slate-600 leading-snug"></textarea>
+                                    <button onclick="addLeadMessage()" class="h-[58px] px-4 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-colors flex items-center gap-2 flex-shrink-0">
+                                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                                        <span class="hidden sm:inline">Enviar</span>
+                                    </button>
                                 </div>
+                                <p class="text-[10px] text-slate-600 mt-1.5"><kbd class="bg-slate-800 border border-slate-700 rounded px-1 py-0.5 font-mono text-[9px]">Ctrl+Enter</kbd> para enviar · visível para toda a equipe</p>
                             </div>
                         </div>
                     </div>
@@ -2207,7 +2211,7 @@
         async function sincronizarStatusAnalise(lead) {
             await sincronizarPlanilha(lead);
         }
-        function getTime() { return new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); }
+        function getTime() { const n = new Date(); return n.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) + ' ' + n.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
         function getDateStr() { return new Date().toLocaleDateString('pt-BR'); }
         function formatCurrency(v) { return 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
 
@@ -4514,14 +4518,21 @@ window.toggleSidebar = function() {
 
         window.renderTimeline = function(lead) {
             const container = document.getElementById('ld-timeline');
-            container.innerHTML = `<div class="absolute left-[39px] top-6 bottom-4 w-px bg-slate-700/80"></div>`; 
+            container.innerHTML = `<div class="absolute left-[27px] top-4 bottom-2 w-px bg-slate-700/60"></div>`;
             document.getElementById('timeline-counter').textContent = (lead.timeline || []).length;
-            
+
             (lead.timeline || []).forEach(item => {
-                const match = item.match(/\[(.*?)\] (.*)/); 
-                const time = match ? match[1] : ''; 
+                const match = item.match(/\[(.*?)\] (.*)/);
+                const time = match ? match[1] : '';
                 const text = match ? match[2] : item;
-                container.insertAdjacentHTML('beforeend', `<div class="relative pl-16"><div class="absolute left-8 top-3 w-4 h-4 bg-primary rounded-full border-[3px] border-slate-900 shadow-[0_0_10px_rgba(59,130,246,0.6)] z-10"></div><div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700/50 shadow-sm hover:bg-slate-800 transition-colors"><span class="text-[12px] font-bold text-blue-400 block mb-1 uppercase tracking-widest">${time}</span><span class="text-sm text-slate-200 font-medium">${text}</span></div></div>`);
+                container.insertAdjacentHTML('beforeend', `
+                <div class="relative pl-10">
+                    <div class="absolute left-[21px] top-2 w-2.5 h-2.5 bg-primary rounded-full border-2 border-slate-900 shadow-[0_0_6px_rgba(59,130,246,0.5)] z-10"></div>
+                    <div class="bg-slate-800/40 px-3 py-2 rounded-lg border border-slate-700/40 hover:bg-slate-800/70 transition-colors">
+                        <span class="text-[10px] font-bold text-blue-400/80 block mb-0.5 tracking-wide">${time}</span>
+                        <span class="text-xs text-slate-300">${text}</span>
+                    </div>
+                </div>`);
             });
         }
 
