@@ -93,12 +93,6 @@
             .kanban-col-mobile { min-width: 86vw !important; width: 86vw !important; }
             /* conteúdo com menos padding lateral */
             .p-8 { padding: 16px !important; }
-            /* timeline compacta no celular */
-            #ld-timeline-sidebar { max-height: 260px !important; }
-        }
-        @media (min-width: 769px) {
-            /* desktop: timeline sem limite de altura */
-            #ld-timeline-sidebar { max-height: none !important; }
         }
 
         /* Glassmorphism & Scrollbar */
@@ -1429,9 +1423,9 @@
                 <span id="messages-counter" class="hidden">0</span>
             </div>
 
-            <div class="flex-1 overflow-y-auto md:overflow-hidden flex flex-col md:flex-row relative">
+            <div class="flex-1 overflow-hidden flex relative">
 
-                <div class="flex-none md:flex-1 overflow-y-auto p-4 md:p-8 border-b md:border-b-0 border-r-0 md:border-r border-slate-700 custom-scrollbar bg-slate-900/30 relative">
+                <div class="flex-1 overflow-y-auto p-4 md:p-8 border-r border-slate-700 custom-scrollbar bg-slate-900/30 relative">
                     
                     <div id="tab-dados" class="tab-content active">
                         <!-- OBSERVAÇÃO INICIAL / CAMPANHA (destaque) -->
@@ -1661,7 +1655,7 @@
 
                 </div>
 
-                <div class="w-full md:w-[450px] bg-slate-800/40 flex flex-col relative flex-shrink-0 border-t md:border-t-0 border-l-0 md:border-l border-slate-700" style="max-height:280px" id="ld-timeline-sidebar">
+                <div class="hidden md:flex w-[450px] bg-slate-800/40 flex-col relative flex-shrink-0 border-l border-slate-700" id="ld-timeline-sidebar">
                     <div class="p-6 border-b border-slate-700 bg-slate-900/50 flex justify-between items-center">
                         <h4 class="font-bold text-white uppercase tracking-wider text-sm flex items-center"><i class="fa-solid fa-history mr-2 text-slate-400"></i>Timeline Automática</h4>
                         <span id="timeline-counter" class="text-xs bg-slate-700 px-2 py-0.5 rounded-full text-slate-300">0</span>
