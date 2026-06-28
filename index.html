@@ -2682,15 +2682,17 @@
             document.getElementById('header-user-role').innerText = currentUser.role;
             document.getElementById('drop-name').innerText = currentUser.name;
             document.getElementById('drop-email').innerText = currentUser.email;
-            document.getElementById('dash-greeting').innerText = `Olá, ${currentUser.name.split(' ')[0]}!`;
-            
+            // dash-greeting/dash-subtitle não existem mais (dashboard virou BI) — protege contra null
+            const _greet = document.getElementById('dash-greeting');
+            if(_greet) _greet.innerText = `Olá, ${currentUser.name.split(' ')[0]}!`;
             const subtitleMap = {
                 'Diretor': 'Visão estratégica completa do seu negócio',
                 'Gerente': 'Acompanhe a performance da sua equipe',
                 'Administrativo': 'Gerencie operações e documentação',
                 'Corretor': 'Seus leads e oportunidades'
             };
-            document.getElementById('dash-subtitle').innerText = subtitleMap[currentUser.role] || 'Bem-vindo';
+            const _sub = document.getElementById('dash-subtitle');
+            if(_sub) _sub.innerText = subtitleMap[currentUser.role] || 'Bem-vindo';
 
             const navManagement = document.getElementById('nav-management');
             if (currentUser.role === 'Corretor') navManagement.classList.add('hidden'); 
