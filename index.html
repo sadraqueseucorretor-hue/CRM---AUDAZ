@@ -109,6 +109,11 @@
         .kanban-card:active { cursor: grabbing; }
         .kanban-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.6); }
         .sortable-ghost { opacity: 0.3; border: 2px dashed #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        /* Lead em destaque (HOT) */
+        .card-hot { border-color: rgba(249,115,22,0.55) !important; box-shadow: 0 0 0 1px rgba(249,115,22,0.4), 0 6px 20px -4px rgba(249,115,22,0.35) !important; background: linear-gradient(180deg, rgba(249,115,22,0.10), rgba(30,41,59,0.7)) !important; }
+        .card-hot:hover { box-shadow: 0 0 0 1px rgba(249,115,22,0.6), 0 10px 28px -4px rgba(249,115,22,0.5) !important; }
+        @keyframes hotPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+        .hot-flame { animation: hotPulse 1.8s ease-in-out infinite; }
         .sortable-drag { transform: rotate(2deg); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
         
         /* Animations */
@@ -1287,6 +1292,7 @@
                         <div class="flex items-center gap-1.5 min-w-0">
                             <h2 class="text-sm md:text-base font-bold text-white leading-none truncate" id="ld-name">Nome <span id="ld-temp" class="text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider"></span></h2>
                             <button onclick="copiarNomeCliente(event)" id="ld-copy-name" title="Copiar nome do cliente" class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-slate-500 hover:text-white hover:bg-slate-700 transition-colors"><i class="fa-regular fa-copy text-[11px]"></i></button>
+                            <button onclick="toggleHotLead(event)" id="ld-hot-btn" title="Marcar como Hot" class="flex-shrink-0 h-6 px-2 flex items-center gap-1 rounded-md text-slate-500 hover:text-orange-400 hover:bg-orange-500/10 transition-colors text-[11px] font-bold"><i class="fa-solid fa-fire text-[11px]"></i><span class="hidden md:inline">Hot</span></button>
                         </div>
                         <!-- Linha 2: Etapa + Docs + Badges — tudo numa linha com scroll -->
                         <div class="flex items-center gap-2 mt-1.5 overflow-x-auto pb-0.5 scrollbar-none">
@@ -3507,13 +3513,13 @@ window.toggleSidebar = function() {
             const progressColor = docProgress < 30 ? '#ef4444' : docProgress < 70 ? '#f59e0b' : '#10b981';
 
             return `
-                <div class="kanban-card bg-slate-800/70 border border-slate-700/50 rounded-2xl p-3.5 mb-2.5 relative overflow-hidden ${colorClass} border-l-[3px] shadow-sm" data-id="${lead.id}" onclick="openLeadDetails('${lead.id}')">
+                <div class="kanban-card bg-slate-800/70 border border-slate-700/50 rounded-2xl p-3.5 mb-2.5 relative overflow-hidden ${colorClass} border-l-[3px] shadow-sm ${lead.hot ? 'card-hot' : ''}" data-id="${lead.id}" onclick="openLeadDetails('${lead.id}')">
                     <!-- Nome + Avatar -->
                     <div class="flex items-start gap-2.5 mb-2.5 pointer-events-none">
-                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5">${initial}</div>
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br ${lead.hot ? 'from-orange-500 to-red-500' : 'from-slate-600 to-slate-700'} flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5">${initial}</div>
                         <div class="flex-1 min-w-0">
                             <h4 class="font-semibold text-[13px] text-white leading-snug">
-                                ${lead.numId ? `<span class="text-blue-400/70 text-[10px] font-bold mr-1">${formatNumId(lead.numId)}</span>` : ''}${lead.name}
+                                ${lead.hot ? '<i class="fa-solid fa-fire text-orange-400 hot-flame text-[11px] mr-1"></i>' : ''}${lead.numId ? `<span class="text-blue-400/70 text-[10px] font-bold mr-1">${formatNumId(lead.numId)}</span>` : ''}${lead.name}
                             </h4>
                             <span class="text-[11px] text-slate-500">${lead.origin || '—'}</span>
                         </div>
@@ -3906,6 +3912,36 @@ window.toggleSidebar = function() {
             });
         }
 
+        // Reflete o estado Hot no botão do cabeçalho do lead
+        function atualizarBotaoHot(lead) {
+            const btn = document.getElementById('ld-hot-btn');
+            if(!btn) return;
+            if(lead && lead.hot) {
+                btn.classList.add('bg-orange-500/20','text-orange-400');
+                btn.classList.remove('text-slate-500');
+                btn.title = 'Remover destaque Hot';
+            } else {
+                btn.classList.remove('bg-orange-500/20','text-orange-400');
+                btn.classList.add('text-slate-500');
+                btn.title = 'Marcar como Hot';
+            }
+        }
+
+        // Liga/desliga o destaque Hot do lead aberto
+        window.toggleHotLead = function(e) {
+            if(e) e.stopPropagation();
+            const id = document.getElementById('ld-id').value;
+            const lead = DB.leads.find(l => l.id === id);
+            if(!lead) return;
+            lead.hot = !lead.hot;
+            lead.updatedAt = new Date().toISOString();
+            lead.updatedBy = currentUser.name;
+            saveLeadsDB();
+            atualizarBotaoHot(lead);
+            showToast(lead.hot ? '🔥 Lead marcado como Hot!' : 'Destaque Hot removido.', lead.hot ? 'success' : 'info');
+            if(['leads','analise','financeiro'].includes(currentView)) renderKanban(currentPipeline);
+        }
+
         // Recarrega o BI embarcado (reseta o iframe e mostra o loader)
         window.recarregarBI = function() {
             const iframe = document.getElementById('bi-iframe');
@@ -4279,6 +4315,7 @@ window.toggleSidebar = function() {
             // Exclusão definitiva removida do modal — somente via tela de Cancelados (Diretor)
             
             atualizarNavLead(lead); // setas de navegação entre leads da coluna
+            atualizarBotaoHot(lead); // reflete o estado Hot no botão do cabeçalho
 
             const modal = document.getElementById('modal-lead-details');
             modal.classList.remove('hidden');
