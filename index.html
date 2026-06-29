@@ -935,6 +935,36 @@
                     </div>
                 </div>
 
+                <!-- ============================================================== -->
+                <!-- VIEW: AGENDA (Agenda Audaz embarcada) -->
+                <!-- ============================================================== -->
+                <div id="view-agenda" class="absolute inset-0 view-section flex flex-col bg-darker hidden">
+                    <!-- Barra de ações da Agenda -->
+                    <div class="flex items-center justify-between px-4 md:px-6 py-2.5 border-b border-slate-700/60 bg-slate-900/60 flex-shrink-0">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-calendar-alt text-white text-xs"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h2 class="text-sm font-bold text-white leading-none truncate">Agenda Audaz</h2>
+                                <span class="text-[10px] text-slate-500">Visitas, reuniões e compromissos</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <button onclick="recarregarAgenda()" title="Atualizar agenda" class="h-8 px-3 flex items-center gap-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors text-xs font-semibold"><i class="fa-solid fa-rotate text-[11px]"></i><span class="hidden md:inline">Atualizar</span></button>
+                            <a href="https://sadraqueseucorretor-hue.github.io/agenda-audaz/" target="_blank" rel="noopener" title="Abrir em nova aba" class="h-8 px-3 flex items-center gap-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors text-xs font-semibold"><i class="fa-solid fa-up-right-from-square text-[11px]"></i><span class="hidden md:inline">Tela cheia</span></a>
+                        </div>
+                    </div>
+                    <!-- Área do iframe -->
+                    <div class="flex-1 relative bg-darker overflow-hidden">
+                        <div id="agenda-loader" class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-darker z-10 transition-opacity duration-500">
+                            <div class="loader" style="width:32px;height:32px;border-width:4px;"></div>
+                            <p class="text-xs text-slate-500 font-semibold">Carregando sua agenda...</p>
+                        </div>
+                        <iframe id="agenda-iframe" src="https://sadraqueseucorretor-hue.github.io/agenda-audaz/" class="w-full h-full border-0 block" title="Agenda Audaz" onload="document.getElementById('agenda-loader')?.classList.add('opacity-0','pointer-events-none')"></iframe>
+                    </div>
+                </div>
+
                 <div id="view-placeholder" class="absolute inset-0 overflow-y-auto p-8 view-section hidden">
                     <div class="max-w-3xl mx-auto mt-20 text-center">
                         <div class="empty-icon inline-block p-8 rounded-full bg-slate-800/50 mb-6">
@@ -2828,10 +2858,11 @@
                     if(!canManageUsers()) { showToast('Você não tem permissão para acessar esta área.', 'error'); navigate('dashboard'); return; }
                     document.getElementById('view-users').classList.remove('hidden');
                     renderUsersTable();
-                } else if(['agenda','equipe','relatorios'].includes(view)) {
+                } else if(view === 'agenda') {
+                    document.getElementById('view-agenda').classList.remove('hidden');
+                } else if(['equipe','relatorios'].includes(view)) {
                     document.getElementById('view-placeholder').classList.remove('hidden');
                     const map = {
-                        agenda: { icon: 'fa-calendar-alt', title: 'Agenda', desc: 'Em breve: gerencie visitas, reuniões e compromissos da equipe.' },
                         equipe: { icon: 'fa-user-tie', title: 'Equipe', desc: 'Em breve: gestão completa de corretores, gerentes e permissões.' },
                         relatorios: { icon: 'fa-chart-line', title: 'Relatórios', desc: 'Em breve: relatórios detalhados de performance, conversão e financeiro.' }
                     };
@@ -3946,6 +3977,14 @@ window.toggleSidebar = function() {
         window.recarregarBI = function() {
             const iframe = document.getElementById('bi-iframe');
             const loader = document.getElementById('bi-loader');
+            if(loader) loader.classList.remove('opacity-0','pointer-events-none');
+            if(iframe) iframe.src = iframe.src;
+        }
+
+        // Recarrega a Agenda embarcada (reseta o iframe e mostra o loader)
+        window.recarregarAgenda = function() {
+            const iframe = document.getElementById('agenda-iframe');
+            const loader = document.getElementById('agenda-loader');
             if(loader) loader.classList.remove('opacity-0','pointer-events-none');
             if(iframe) iframe.src = iframe.src;
         }
