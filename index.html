@@ -626,6 +626,39 @@
                                 <p class="text-xs text-slate-500 mt-3"><i class="fa-solid fa-circle-info mr-1"></i> Exemplo: Comissão Total R$ 10.000 com Nota 15% → desconto R$ 1.500 → <b class="text-emerald-400">Líquida R$ 8.500</b>. Vale para novas vendas e ao ressincronizar.</p>
                             </div>
 
+                            <!-- MÊS COMERCIAL -->
+                            <div id="prof-mescom-panel" class="glass p-8 rounded-2xl border border-slate-700/50 hidden mt-6">
+                                <h4 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-700/50 pb-3"><i class="fa-solid fa-calendar-week text-cyan-400 mr-2"></i> Mês Comercial</h4>
+                                <p class="text-sm text-slate-400 mb-6">Defina o período de cada mês comercial. O sistema usa esses períodos (em vez do mês do calendário) para agrupar meses na planilha e no BI. <span class="text-amber-300">Ex.: Junho/2026 de 10/06 a 03/07.</span></p>
+
+                                <!-- Formulário -->
+                                <div class="bg-slate-900/40 border border-slate-700/50 rounded-xl p-4 mb-5">
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Mês de referência</label>
+                                            <div class="flex gap-2">
+                                                <select id="mescom-mes" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white"></select>
+                                                <input type="number" id="mescom-ano" min="2020" max="2100" class="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2.5 text-sm text-white" placeholder="Ano">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Início</label>
+                                            <input type="date" id="mescom-inicio" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Encerramento</label>
+                                            <input type="date" id="mescom-fim" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white">
+                                        </div>
+                                        <button onclick="salvarMesComercial()" id="mescom-btn" class="bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2"><i class="fa-solid fa-plus"></i> <span id="mescom-btn-label">Novo Mês Comercial</span></button>
+                                    </div>
+                                    <input type="hidden" id="mescom-editing" value="">
+                                    <button onclick="cancelarEdicaoMesComercial()" id="mescom-cancel" class="hidden mt-3 text-xs text-slate-400 hover:text-white font-semibold"><i class="fa-solid fa-xmark mr-1"></i> Cancelar edição</button>
+                                </div>
+
+                                <!-- Lista -->
+                                <div id="mescom-lista" class="space-y-2"></div>
+                            </div>
+
                             <div id="prof-sheets-panel" class="glass p-8 rounded-2xl border border-slate-700/50 hidden mt-6">
                                 <h4 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-700/50 pb-3"><i class="fa-solid fa-table-cells text-green-400 mr-2"></i> Integração com Google Sheets</h4>
                                 <p class="text-sm text-slate-400 mb-6">Conecte o CRM a uma planilha do Google para registrar automaticamente as análises e vendas.</p>
@@ -1873,7 +1906,7 @@
         let LISTAS = { construtoras: [], empreendimentos: [] };
 
         // Configurações gerais (Diretor): % da Nota Fiscal aplicado sobre a comissão
-        let CONFIG = { percentualNota: 0 };
+        let CONFIG = { percentualNota: 0, mesesComerciais: [] };
 
         const DOC_CHECKLIST_ITEMS = [
             { id: 'rg', label: 'RG / CNH' }, { id: 'cpf', label: 'CPF' }, { id: 'comp_residencia', label: 'Comp. Residência' },
@@ -1932,12 +1965,36 @@
             return lead.pipeline;
         }
 
-        // Converte "DD/MM/YYYY" em "Mês/AAAA"
+        // Normaliza várias formas de data (Date, "YYYY-MM-DD", "DD/MM/YYYY") em Date à meia-noite
+        function _parseDataQualquer(d) {
+            if(!d) return null;
+            if(d instanceof Date) return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            const s = String(d).trim();
+            let m;
+            if((m = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return new Date(+m[1], +m[2]-1, +m[3]);
+            if((m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/))) return new Date(+m[3], +m[2]-1, +m[1]);
+            const dt = new Date(s);
+            return isNaN(dt.getTime()) ? null : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+        }
+
+        // Rótulo do MÊS COMERCIAL (ex.: "Junho/2026") em que a data cai.
+        // Usa os períodos cadastrados pelo Diretor; se nenhum contém a data, cai no mês do calendário.
+        function labelMesComercial(dateInput) {
+            const dt = _parseDataQualquer(dateInput);
+            if(!dt) return '';
+            const periodos = CONFIG.mesesComerciais || [];
+            for(const p of periodos) {
+                const ini = _parseDataQualquer(p.inicio);
+                const fim = _parseDataQualquer(p.fim);
+                if(ini && fim && dt >= ini && dt <= fim) return p.ref;
+            }
+            return MESES_PT[dt.getMonth()] + '/' + dt.getFullYear();
+        }
+
+        // Converte "DD/MM/YYYY" em "Mês/AAAA" — agora respeita o mês comercial
         function mesRefDeDataBR(d) {
             if(!d) return '';
-            const p = String(d).split('/');
-            if(p.length === 3) return MESES_PT[parseInt(p[1],10)-1] + '/' + p[2];
-            return '';
+            return labelMesComercial(d);
         }
 
         // Data e mês do Ganho (a partir da data da venda)
@@ -1946,7 +2003,7 @@
             const sd = lead.saleDate || new Date().toISOString().split('T')[0];
             const p = sd.split('-'); // YYYY-MM-DD
             if(p.length === 3) {
-                return { data: p[2] + '/' + p[1] + '/' + p[0], mes: MESES_PT[parseInt(p[1],10)-1] + '/' + p[0] };
+                return { data: p[2] + '/' + p[1] + '/' + p[0], mes: labelMesComercial(sd) };
             }
             return { data: '', mes: '' };
         }
@@ -2000,7 +2057,7 @@
                         action: 'sync',
                         id: leadSheetId(lead),
                         data: lead.date || lead.dataAnalise || agora.toLocaleDateString('pt-BR'),
-                        mes: mesRefDeDataBR(lead.date) || lead.mesAnalise || (MESES_PT[agora.getMonth()] + '/' + agora.getFullYear()),
+                        mes: mesRefDeDataBR(lead.date) || lead.mesAnalise || labelMesComercial(agora),
                         corretor: lead.broker || '',
                         equipe: broker?.team || '',
                         cliente: lead.name || '',
@@ -2060,6 +2117,110 @@
             await saveConfigDB();
             triggerAutoSaveUI();
             showToast(`Percentual da Nota salvo: ${v}%`, 'success');
+        }
+
+        // ====================================================================
+        // MÊS COMERCIAL (Diretor) — períodos que substituem o mês do calendário
+        // ====================================================================
+        function _fmtDataBRcurta(iso) {
+            const dt = _parseDataQualquer(iso);
+            if(!dt) return '—';
+            return String(dt.getDate()).padStart(2,'0') + '/' + String(dt.getMonth()+1).padStart(2,'0') + '/' + dt.getFullYear();
+        }
+
+        window.renderMesesComerciais = function() {
+            // Popula o select de meses (uma vez)
+            const sel = document.getElementById('mescom-mes');
+            if(sel && !sel.options.length) {
+                sel.innerHTML = MESES_PT.map((m,i) => `<option value="${i}">${m}</option>`).join('');
+            }
+            const anoInput = document.getElementById('mescom-ano');
+            if(anoInput && !anoInput.value) anoInput.value = new Date().getFullYear();
+
+            const lista = document.getElementById('mescom-lista');
+            if(!lista) return;
+            const periodos = CONFIG.mesesComerciais || [];
+            if(periodos.length === 0) {
+                lista.innerHTML = `<div class="text-center text-slate-500 py-6 text-sm"><i class="fa-regular fa-calendar text-2xl block mb-2 opacity-50"></i>Nenhum mês comercial cadastrado ainda.</div>`;
+                return;
+            }
+            // Ordena por data de início
+            const ordenados = [...periodos].map((p,i) => ({...p, _idx: i})).sort((a,b) => (_parseDataQualquer(a.inicio)||0) - (_parseDataQualquer(b.inicio)||0));
+            lista.innerHTML = ordenados.map(p => `
+                <div class="flex items-center justify-between gap-3 bg-slate-900/40 border border-slate-700/50 rounded-xl px-4 py-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-9 h-9 rounded-lg bg-cyan-500/15 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-calendar-week text-cyan-400 text-sm"></i></div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-white truncate">${p.ref}</p>
+                            <p class="text-[11px] text-slate-400">${_fmtDataBRcurta(p.inicio)} → ${_fmtDataBRcurta(p.fim)}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                        <button onclick="editarMesComercial(${p._idx})" title="Editar" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button onclick="excluirMesComercial(${p._idx})" title="Excluir" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>
+                </div>`).join('');
+        }
+
+        window.salvarMesComercial = async function() {
+            if(currentUser.role !== 'Diretor') { showToast('Apenas o Diretor pode configurar o mês comercial.', 'error'); return; }
+            const mesIdx = parseInt(document.getElementById('mescom-mes').value, 10);
+            const ano = parseInt(document.getElementById('mescom-ano').value, 10);
+            const inicio = document.getElementById('mescom-inicio').value;
+            const fim = document.getElementById('mescom-fim').value;
+            if(isNaN(mesIdx) || isNaN(ano)) { showToast('Selecione o mês e o ano de referência.', 'error'); return; }
+            if(!inicio || !fim) { showToast('Preencha as datas de início e encerramento.', 'error'); return; }
+            if(_parseDataQualquer(fim) < _parseDataQualquer(inicio)) { showToast('O encerramento não pode ser antes do início.', 'error'); return; }
+            const ref = MESES_PT[mesIdx] + '/' + ano;
+            const novo = { ref, inicio, fim };
+            CONFIG.mesesComerciais = CONFIG.mesesComerciais || [];
+            const editing = document.getElementById('mescom-editing').value;
+            if(editing !== '') {
+                CONFIG.mesesComerciais[parseInt(editing,10)] = novo;
+            } else {
+                // Evita duplicar o mesmo mês de referência
+                const existe = CONFIG.mesesComerciais.findIndex(p => p.ref === ref);
+                if(existe >= 0) CONFIG.mesesComerciais[existe] = novo;
+                else CONFIG.mesesComerciais.push(novo);
+            }
+            await saveConfigDB();
+            cancelarEdicaoMesComercial();
+            renderMesesComerciais();
+            showToast(`Mês comercial salvo: ${ref}`, 'success');
+        }
+
+        window.editarMesComercial = function(idx) {
+            const p = (CONFIG.mesesComerciais || [])[idx];
+            if(!p) return;
+            const partes = String(p.ref).split('/');
+            const mesIdx = MESES_PT.indexOf(partes[0]);
+            document.getElementById('mescom-mes').value = mesIdx >= 0 ? mesIdx : 0;
+            document.getElementById('mescom-ano').value = partes[1] || new Date().getFullYear();
+            document.getElementById('mescom-inicio').value = p.inicio || '';
+            document.getElementById('mescom-fim').value = p.fim || '';
+            document.getElementById('mescom-editing').value = String(idx);
+            document.getElementById('mescom-btn-label').textContent = 'Salvar Alterações';
+            document.getElementById('mescom-cancel').classList.remove('hidden');
+        }
+
+        window.excluirMesComercial = async function(idx) {
+            if(currentUser.role !== 'Diretor') { showToast('Apenas o Diretor pode excluir.', 'error'); return; }
+            const p = (CONFIG.mesesComerciais || [])[idx];
+            if(!p) return;
+            if(!confirm(`Excluir o mês comercial "${p.ref}"?`)) return;
+            CONFIG.mesesComerciais.splice(idx, 1);
+            await saveConfigDB();
+            cancelarEdicaoMesComercial();
+            renderMesesComerciais();
+            showToast('Mês comercial excluído.', 'info');
+        }
+
+        window.cancelarEdicaoMesComercial = function() {
+            const ed = document.getElementById('mescom-editing'); if(ed) ed.value = '';
+            const lbl = document.getElementById('mescom-btn-label'); if(lbl) lbl.textContent = 'Novo Mês Comercial';
+            const cancel = document.getElementById('mescom-cancel'); if(cancel) cancel.classList.add('hidden');
+            const ini = document.getElementById('mescom-inicio'); if(ini) ini.value = '';
+            const fim = document.getElementById('mescom-fim'); if(fim) fim.value = '';
         }
 
         // Salva o link do robô configurado pelo Diretor
@@ -2144,7 +2305,7 @@
         async function enviarParaPlanilhaAnalise(lead) {
             const agora = new Date();
             if(!lead.dataAnalise) lead.dataAnalise = agora.toLocaleDateString('pt-BR');
-            if(!lead.mesAnalise) lead.mesAnalise = MESES_PT[agora.getMonth()] + '/' + agora.getFullYear();
+            if(!lead.mesAnalise) lead.mesAnalise = labelMesComercial(agora);
             await sincronizarPlanilha(lead);
         }
 
@@ -2348,7 +2509,7 @@
             // Carrega configurações gerais (% da Nota)
             try {
                 const savedConfig = await dbGet(DB_KEYS.CONFIG);
-                if(savedConfig) { const c = JSON.parse(savedConfig); if(c && typeof c.percentualNota === 'number') CONFIG.percentualNota = c.percentualNota; }
+                if(savedConfig) { const c = JSON.parse(savedConfig); if(c && typeof c.percentualNota === 'number') CONFIG.percentualNota = c.percentualNota; if(c && Array.isArray(c.mesesComerciais)) CONFIG.mesesComerciais = c.mesesComerciais; }
             } catch(e) { /* usa padrão */ }
         }
 
@@ -2777,6 +2938,8 @@
                 if(sheetsPanel) { sheetsPanel.classList.remove('hidden'); const si = document.getElementById('sheets-url-input'); if(si) si.value = SHEETS_URL; }
                 const comissaoPanel = document.getElementById('prof-comissao-panel');
                 if(comissaoPanel) { comissaoPanel.classList.remove('hidden'); const ci = document.getElementById('config-nota'); if(ci) ci.value = CONFIG.percentualNota || ''; }
+                const mescomPanel = document.getElementById('prof-mescom-panel');
+                if(mescomPanel) { mescomPanel.classList.remove('hidden'); renderMesesComerciais(); }
                 loadSysLogo();
             } else {
                 backupPanel.classList.add('hidden');
@@ -2787,6 +2950,8 @@
                 if(sheetsPanelH) sheetsPanelH.classList.add('hidden');
                 const comissaoPanelH = document.getElementById('prof-comissao-panel');
                 if(comissaoPanelH) comissaoPanelH.classList.add('hidden');
+                const mescomPanelH = document.getElementById('prof-mescom-panel');
+                if(mescomPanelH) mescomPanelH.classList.add('hidden');
             }
 
             // Mostrar "Leads a Distribuir" para Diretor, Gerente e Administrativo
@@ -3600,7 +3765,7 @@ window.toggleSidebar = function() {
             if(lead.pipeline === 'analise' && newStageId === 'aprovado' && !lead.dataAprovacao) {
                 const na = new Date();
                 lead.dataAprovacao = na.toLocaleDateString('pt-BR');
-                lead.mesAprovacao = MESES_PT[na.getMonth()] + '/' + na.getFullYear();
+                lead.mesAprovacao = labelMesComercial(na);
             }
             updateColumnOrder(newColumnEl);
             saveLeadsDB();
@@ -6314,7 +6479,7 @@ window.toggleSidebar = function() {
             if(lead.pipeline === 'analise' && newStageId === 'aprovado' && !lead.dataAprovacao) {
                 const na = new Date();
                 lead.dataAprovacao = na.toLocaleDateString('pt-BR');
-                lead.mesAprovacao = MESES_PT[na.getMonth()] + '/' + na.getFullYear();
+                lead.mesAprovacao = labelMesComercial(na);
             }
 
             saveLeadsDB();
@@ -6357,7 +6522,7 @@ window.toggleSidebar = function() {
             if(lead.pipeline === 'analise' && newStageId === 'aprovado' && !lead.dataAprovacao) {
                 const na = new Date();
                 lead.dataAprovacao = na.toLocaleDateString('pt-BR');
-                lead.mesAprovacao = MESES_PT[na.getMonth()] + '/' + na.getFullYear();
+                lead.mesAprovacao = labelMesComercial(na);
             }
 
             saveLeadsDB();
