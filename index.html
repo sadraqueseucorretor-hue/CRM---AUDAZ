@@ -2671,10 +2671,25 @@
         // ====================================================================
         // 5. AUTENTICAÇÃO E SESSÃO
         // ====================================================================
+        // Detecta se a URL atual é um link de redefinição de senha (formato antigo com #hash
+        // OU o formato novo/PKCE com ?code= na query). Como o app não usa login social,
+        // um ?code= é praticamente sempre o link de recuperação.
+        function _ehLinkRecovery() {
+            const h = window.location.hash || '';
+            const s = window.location.search || '';
+            if(h.indexOf('type=recovery') !== -1) return true;
+            if(s.indexOf('type=recovery') !== -1) return true;
+            if(s.indexOf('code=') !== -1) return true;
+            return false;
+        }
+
         async function checkAuth() {
-            // Link de redefinição de senha (vindo do e-mail): não mexe na sessão de recovery
-            if(window.location.hash && window.location.hash.indexOf('type=recovery') !== -1) {
+            // Link de redefinição de senha (vindo do e-mail): NÃO desloga — deixa o modal de nova senha abrir
+            if(_ehLinkRecovery()) {
                 showLogin();
+                // Garante que o modal de nova senha apareça mesmo que o evento PASSWORD_RECOVERY
+                // já tenha disparado antes desta função rodar
+                setTimeout(() => { if(typeof openModal === 'function') openModal('modal-nova-senha'); }, 300);
                 return;
             }
             // Só retoma a sessão se houver login OFICIAL (Supabase Auth) ativo
