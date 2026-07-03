@@ -778,7 +778,7 @@
 // Entrega os dados da planilha para o BI — SO com a senha correta (planilha pode ser privada)
 function doGet(e) {
   var token = (e && e.parameter && e.parameter.token) ? String(e.parameter.token) : "";
-  if (token !== "990310") {
+  if (token !== "audaz@bi") {
     return ContentService.createTextOutput(JSON.stringify({ ok: false, erro: "nao autorizado" }))
       .setMimeType(ContentService.MimeType.JSON);
   }
