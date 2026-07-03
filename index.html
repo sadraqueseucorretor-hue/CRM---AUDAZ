@@ -773,6 +773,19 @@
   sheet.getRange(linha, 31, 1, 1).setNumberFormat("R$ #,##0.00");
   sheet.getRange(linha, 33, 1, 3).setNumberFormat("R$ #,##0.00");
   return ContentService.createTextOutput(JSON.stringify({ok:true}));
+}
+
+// Entrega os dados da planilha para o BI — SO com a senha correta (planilha pode ser privada)
+function doGet(e) {
+  var token = (e && e.parameter && e.parameter.token) ? String(e.parameter.token) : "";
+  if (token !== "990310") {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, erro: "nao autorizado" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  var dados = sheet.getDataRange().getValues(); // inclui a linha de cabecalho
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, dados: dados }))
+    .setMimeType(ContentService.MimeType.JSON);
 }</textarea>
                                         </div>
                                     </div>
