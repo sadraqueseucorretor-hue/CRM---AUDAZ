@@ -3640,11 +3640,25 @@ window.toggleSidebar = function() {
         }
 
         window.renderKanban = function(pipelineId) {
-            const board = document.getElementById('kanban-board'); 
+            const board = document.getElementById('kanban-board');
             board.innerHTML = '';
+
+            // SEGURANÇA: leads cuja etapa não existe mais neste pipeline (após editar/reordenar/
+            // remover etapas) iriam "sumir" das colunas. Reancora-os na 1ª etapa para não perder ninguém.
+            const stagesDoPipe = PIPELINES[pipelineId] || [];
+            const idsValidos = new Set(stagesDoPipe.map(s => s.id));
+            const primeiraEtapa = stagesDoPipe[0];
+            if(primeiraEtapa) {
+                let reancorou = false;
+                DB.leads.forEach(l => {
+                    if(l.pipeline === pipelineId && !idsValidos.has(l.stageId)) { l.stageId = primeiraEtapa.id; reancorou = true; }
+                });
+                if(reancorou) saveLeadsDB();
+            }
+
             const allLeads = getVisibleLeads();
             const filteredLeads = applyKanbanFilters(allLeads);
-            
+
             PIPELINES[pipelineId].forEach(stage => {
                 let stageLeads = filteredLeads.filter(l => l.pipeline === pipelineId && l.stageId === stage.id);
                 // Ordena por urgência do follow-up: vencidos/mais próximos no topo,
