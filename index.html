@@ -4984,12 +4984,25 @@ window.toggleSidebar = function() {
                     ghostClass: 'sortable-ghost',
                     onEnd: function(evt) {
                         if(evt.oldIndex === evt.newIndex) return;
-                        _capturePipelineInputs(); // preserva o que foi digitado antes de reordenar
-                        const arr = PIPELINES[_currentPipelineTab];
-                        const movido = arr.splice(evt.oldIndex, 1)[0];
-                        arr.splice(evt.newIndex, 0, movido);
-                        renderPipelineEditor(_currentPipelineTab);
-                        showToast('Ordem alterada — clique em "Salvar Alterações" para confirmar.', 'info');
+                        const tab = _currentPipelineTab;
+                        const orig = PIPELINES[tab];
+                        // Reconstrói a lista lendo a NOVA ordem direto das linhas na tela,
+                        // preservando o id de cada etapa (evita embaralhar nomes)
+                        const novos = [];
+                        Array.from(listEl.children).forEach(row => {
+                            const input = row.querySelector('.pipeline-stage-input');
+                            const sel = row.querySelector('.pipeline-stage-color');
+                            if(!input) return;
+                            const oi = parseInt(input.getAttribute('data-index'), 10);
+                            const base = orig[oi];
+                            if(!base) return;
+                            novos.push({ id: base.id, title: (input.value.trim() || base.title), color: (sel ? sel.value : base.color) });
+                        });
+                        if(novos.length === orig.length) {
+                            PIPELINES[tab] = novos;
+                            renderPipelineEditor(tab);
+                            showToast('Ordem alterada — clique em "Salvar Alterações" para confirmar.', 'info');
+                        }
                     }
                 });
             }
