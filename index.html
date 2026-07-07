@@ -4956,10 +4956,11 @@ window.toggleSidebar = function() {
             if(!container) return;
 
             container.innerHTML = `
+                <p class="text-[11px] text-slate-500 mb-3"><i class="fa-solid fa-arrows-up-down mr-1"></i> Arraste pelo ícone <i class="fa-solid fa-grip-vertical mx-0.5"></i> para reordenar as etapas.</p>
                 <div class="space-y-3" id="pipeline-stages-list">
                     ${stages.map((s, i) => `
                     <div class="flex items-center gap-3 bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3" data-index="${i}">
-                        <i class="fa-solid fa-grip-vertical text-slate-600 text-sm"></i>
+                        <i class="fa-solid fa-grip-vertical pipeline-drag-handle text-slate-500 hover:text-white text-sm" style="cursor:grab" title="Arraste para reordenar"></i>
                         <div class="w-3 h-3 rounded-full flex-shrink-0 ${s.color.replace('border-l-','bg-')}"></div>
                         <input type="text" value="${_escAttr(s.title)}" data-index="${i}" data-field="title"
                             class="pipeline-stage-input flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
@@ -4973,6 +4974,25 @@ window.toggleSidebar = function() {
                         </button>
                     </div>`).join('')}
                 </div>`;
+
+            // Ativa arrastar-e-soltar para reordenar as etapas
+            const listEl = document.getElementById('pipeline-stages-list');
+            if(listEl && window.Sortable) {
+                Sortable.create(listEl, {
+                    handle: '.pipeline-drag-handle',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    onEnd: function(evt) {
+                        if(evt.oldIndex === evt.newIndex) return;
+                        _capturePipelineInputs(); // preserva o que foi digitado antes de reordenar
+                        const arr = PIPELINES[_currentPipelineTab];
+                        const movido = arr.splice(evt.oldIndex, 1)[0];
+                        arr.splice(evt.newIndex, 0, movido);
+                        renderPipelineEditor(_currentPipelineTab);
+                        showToast('Ordem alterada — clique em "Salvar Alterações" para confirmar.', 'info');
+                    }
+                });
+            }
         }
 
         window.addPipelineStage = function() {
