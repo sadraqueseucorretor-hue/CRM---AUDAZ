@@ -467,13 +467,6 @@
                                 <select id="kanban-filter-broker" onchange="renderKanban(currentPipeline)" class="bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-sm text-white cursor-pointer">
                                     <option value="">Todos os Corretores</option>
                                 </select>
-                                <select id="kanban-filter-temp" onchange="renderKanban(currentPipeline)" class="bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-sm text-white cursor-pointer">
-                                    <option value="">Todas Temperaturas</option>
-                                    <option value="Hot">🔥 Hot</option>
-                                    <option value="Morno">☕ Morno</option>
-                                    <option value="Frio">❄️ Frio</option>
-                                    <option value="Novo">✨ Novo</option>
-                                </select>
                                 <button onclick="clearKanbanFilters()" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-sm transition-colors text-white" data-tooltip="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
                             </div>
                         </div>
@@ -3623,8 +3616,8 @@ window.toggleSidebar = function() {
             const search = (document.getElementById('kanban-search')?.value || '').toLowerCase();
             const team = document.getElementById('kanban-filter-team')?.value || '';
             const broker = document.getElementById('kanban-filter-broker')?.value || '';
-            const temp = document.getElementById('kanban-filter-temp')?.value || '';
-            
+            const temp = '';
+
             let filtered = leads;
             if(search) filtered = filtered.filter(l => l.name.toLowerCase().includes(search) || (l.phone || '').toLowerCase().includes(search) || (l.cpf || '').toLowerCase().includes(search));
             if(team) {
@@ -3654,7 +3647,6 @@ window.toggleSidebar = function() {
             const teamFilter = document.getElementById('kanban-filter-team');
             if(teamFilter) teamFilter.value = '';
             document.getElementById('kanban-filter-broker').value = '';
-            document.getElementById('kanban-filter-temp').value = '';
             renderKanban(currentPipeline);
         }
 
