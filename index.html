@@ -1961,7 +1961,14 @@ function doGet(e) {
         // Resultado da Análise de Crédito (Aprovado/Reprovado/Pendente...) — fica registrado no lead
         function resultadoAnalise(lead) {
             if(lead.pipeline === 'analise') {
-                return STATUS_ANALISE_MAP[lead.stageId] || PIPELINES.analise.find(s => s.id === lead.stageId)?.title || 'Em Análise';
+                const stage = PIPELINES.analise.find(s => s.id === lead.stageId);
+                const title = stage ? stage.title : '';
+                // Se a etapa é personalizada OU foi renomeada em relação ao padrão,
+                // usa o NOME ATUAL da etapa (evita traduzir, ex., "Aprovado Stand-By" como "BACEN").
+                const def = (PIPELINES_DEFAULT.analise || []).find(s => s.id === lead.stageId);
+                if(stage && (!def || def.title !== title)) return title;
+                // Etapa padrão intacta: usa o rótulo canônico (mantém compatibilidade com BI/relatórios)
+                return STATUS_ANALISE_MAP[lead.stageId] || title || 'Em Análise';
             }
             // Fora da análise: mantém o último resultado registrado
             return lead.analiseResult || '';
