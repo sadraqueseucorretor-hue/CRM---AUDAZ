@@ -3636,7 +3636,6 @@ window.toggleSidebar = function() {
             if(search) chips.push(`<span class="filter-chip">Busca: ${search} <button onclick="document.getElementById('kanban-search').value=''; renderKanban(currentPipeline)"><i class="fa-solid fa-times"></i></button></span>`);
             if(team) chips.push(`<span class="filter-chip">Equipe: ${team} <button onclick="document.getElementById('kanban-filter-team').value=''; renderKanban(currentPipeline)"><i class="fa-solid fa-times"></i></button></span>`);
             if(broker) chips.push(`<span class="filter-chip">Corretor: ${broker} <button onclick="document.getElementById('kanban-filter-broker').value=''; renderKanban(currentPipeline)"><i class="fa-solid fa-times"></i></button></span>`);
-            if(temp) chips.push(`<span class="filter-chip">Temperatura: ${temp} <button onclick="document.getElementById('kanban-filter-temp').value=''; renderKanban(currentPipeline)"><i class="fa-solid fa-times"></i></button></span>`);
             chipsContainer.innerHTML = chips.join('');
             
             return filtered;
