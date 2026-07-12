@@ -1388,12 +1388,14 @@
                     renderUsersTable();
                 } else if(view === 'agenda') {
                     document.getElementById('view-agenda').classList.remove('hidden');
-                } else if(['equipe','relatorios','faturamento'].includes(view)) {
+                } else if(view === 'faturamento') {
+                    document.getElementById('view-faturamento').classList.remove('hidden');
+                    renderFaturamento();
+                } else if(['equipe','relatorios'].includes(view)) {
                     document.getElementById('view-placeholder').classList.remove('hidden');
                     const map = {
                         equipe: { icon: 'fa-user-tie', title: 'Equipe', desc: 'Em breve: gestão completa de corretores, gerentes e permissões.' },
-                        relatorios: { icon: 'fa-chart-line', title: 'Relatórios', desc: 'Em breve: relatórios detalhados de performance, conversão e financeiro.' },
-                        faturamento: { icon: 'fa-file-invoice-dollar', title: 'Faturamento', desc: 'Em breve: controle de faturamento, notas e recebimentos da operação.' }
+                        relatorios: { icon: 'fa-chart-line', title: 'Relatórios', desc: 'Em breve: relatórios detalhados de performance, conversão e financeiro.' }
                     };
                     const data = map[view];
                     document.getElementById('placeholder-icon').className = `fa-solid ${data.icon} text-6xl text-primary`;
@@ -2598,6 +2600,62 @@ window.toggleSidebar = function() {
         // ====================================================================
         // CONTROLE DE COMISSÃO (recebimentos do Ganho)
         // ====================================================================
+        // ====================================================================
+        // FATURAMENTO — comissões do GERENTE (recebido x falta) nos leads do Ganho
+        // ====================================================================
+        window.renderFaturamento = function() {
+            const tbody = document.getElementById('fat-tbody');
+            if(!tbody) return;
+            const busca = (document.getElementById('fat-search')?.value || '').toLowerCase();
+
+            // Só leads no Ganho (financeiro), respeitando a visibilidade do usuário
+            let leads = getVisibleLeads().filter(l => l.pipeline === 'financeiro');
+            if(busca) leads = leads.filter(l =>
+                (l.name||'').toLowerCase().includes(busca) || (l.broker||'').toLowerCase().includes(busca)
+            );
+
+            let totPrevista = 0, totRecebido = 0, totFalta = 0, qtdIntegral = 0;
+            const linhas = leads.map(l => {
+                const total = l.comissaoGerente || 0;
+                const recebido = (l.recebimentos || []).filter(r => r.tipo === 'Gerente').reduce((s,r) => s + (r.valor||0), 0);
+                const falta = Math.max(0, total - recebido);
+                const stage = PIPELINES.financeiro.find(s => s.id === l.stageId);
+                const stageTitle = stage ? stage.title : '—';
+                const stageColor = stage ? stage.color.replace('border-l-','bg-') : 'bg-slate-500';
+                // "Recebido Integral" (última etapa) OU falta zerada = faturado total
+                const integral = (l.stageId === 'recebido-integral') || (total > 0 && falta === 0);
+                totPrevista += total; totRecebido += recebido; totFalta += falta;
+                if(integral) qtdIntegral++;
+
+                let statusBadge;
+                if(integral) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30"><i class="fa-solid fa-flag-checkered text-[9px]"></i>Faturado Total</span>';
+                else if(recebido > 0) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">Parcial</span>';
+                else statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-600/30 text-slate-400 border border-slate-600/40">Pendente</span>';
+
+                return `<tr class="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors cursor-pointer" onclick="openLeadDetails('${l.id}')">
+                    <td class="py-3 px-4">
+                        <div class="font-bold text-white text-sm">${l.numId ? '<span class="text-blue-400/70 text-[11px] mr-1">'+formatNumId(l.numId)+'</span>' : ''}${l.name}</div>
+                        <div class="text-[11px] text-slate-500">${l.broker || '—'}</div>
+                    </td>
+                    <td class="py-3 px-4"><span class="inline-flex items-center gap-1.5 text-xs text-slate-300"><span class="w-2 h-2 rounded-full ${stageColor}"></span>${stageTitle}</span></td>
+                    <td class="py-3 px-4 text-right text-sm font-bold text-white">${formatCurrency(total)}</td>
+                    <td class="py-3 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(recebido)}</td>
+                    <td class="py-3 px-4 text-right text-sm font-bold ${falta > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatCurrency(falta)}</td>
+                    <td class="py-3 px-4 text-center">${statusBadge}</td>
+                </tr>`;
+            }).join('');
+
+            tbody.innerHTML = linhas || '<tr><td colspan="6" class="py-16 text-center text-slate-500"><i class="fa-regular fa-folder-open text-3xl mb-3 block opacity-50"></i>Nenhuma venda no Ganho ainda.</td></tr>';
+
+            const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent = v; };
+            set('fat-prevista', formatCurrency(totPrevista));
+            set('fat-recebido', formatCurrency(totRecebido));
+            set('fat-falta', formatCurrency(totFalta));
+            set('fat-qtd', leads.length);
+            set('fat-recebido-pct', (totPrevista > 0 ? Math.round(totRecebido/totPrevista*100) : 0) + '%');
+            set('fat-integral-qtd', qtdIntegral);
+        }
+
         function renderControleComissao(lead) {
             const resumo = document.getElementById('ld-comissao-resumo');
             const lista = document.getElementById('ld-receb-lista');
