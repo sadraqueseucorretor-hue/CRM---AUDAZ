@@ -2637,8 +2637,13 @@ window.toggleSidebar = function() {
 
             let totPrevista = 0, totRecebido = 0, totFalta = 0, qtdIntegral = 0;
             const dadosLead = (l) => {
-                const total = l.comissaoGerente || 0;
-                const recebido = (l.recebimentos || []).filter(r => r.tipo === 'Gerente').reduce((s,r) => s + (r.valor||0), 0);
+                // Bônus do gerente (líquido previsto + já recebido) entram no faturamento
+                const gBonus = (l.bonuses || []).filter(b => b.beneficiario === 'Gerente');
+                const bonusPrev = gBonus.reduce((s,b) => { const v=b.valor||0, p=b.pctNota||0; return s + (v - v*p/100); }, 0);
+                const bonusRec = gBonus.reduce((s,b) => s + (b.recebido||0), 0);
+                const total = (l.comissaoGerente || 0) + bonusPrev;
+                const recComissao = (l.recebimentos || []).filter(r => r.tipo === 'Gerente').reduce((s,r) => s + (r.valor||0), 0);
+                const recebido = recComissao + bonusRec;
                 const falta = Math.max(0, total - recebido);
                 const integral = (l.stageId === 'recebido-integral') || (total > 0 && falta === 0);
                 return { total, recebido, falta, integral };
@@ -2695,15 +2700,19 @@ window.toggleSidebar = function() {
 
             // ===== Recebimentos por Mês (comissão do gerente, pela data de cada recebimento) =====
             const meses = {}; // chave = rótulo do mês -> { total, itens:[{data, dataOrd, valor, cliente}] }
+            const _addReceb = (data, valor, cliente, ehBonus) => {
+                const dt = _parseDataQualquer(data);
+                const rotulo = data ? labelMesComercial(data) : 'Sem data';
+                if(!meses[rotulo]) meses[rotulo] = { total: 0, ord: dt ? dt.getTime() : Infinity, itens: [] };
+                meses[rotulo].total += (valor || 0);
+                if(dt && dt.getTime() < meses[rotulo].ord) meses[rotulo].ord = dt.getTime();
+                meses[rotulo].itens.push({ dataOrd: dt ? dt.getTime() : 0, data: data ? String(data).split('-').reverse().join('/').replace(/^(\d{2}\/\d{2}\/\d{4}).*/, '$1') : '—', valor: valor || 0, cliente, ehBonus: !!ehBonus });
+            };
             leads.forEach(l => {
-                (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => {
-                    const dt = _parseDataQualquer(r.data);
-                    const rotulo = r.data ? labelMesComercial(r.data) : 'Sem data';
-                    if(!meses[rotulo]) meses[rotulo] = { total: 0, ord: dt ? dt.getTime() : Infinity, itens: [] };
-                    meses[rotulo].total += (r.valor || 0);
-                    if(dt && dt.getTime() < meses[rotulo].ord) meses[rotulo].ord = dt.getTime();
-                    meses[rotulo].itens.push({ dataOrd: dt ? dt.getTime() : 0, data: r.data || '—', valor: r.valor || 0, cliente: l.name });
-                });
+                // Recebimentos de comissão (gerente)
+                (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => _addReceb(r.data, r.valor, l.name, false));
+                // Bônus do gerente já recebidos
+                (l.bonuses || []).filter(b => b.beneficiario === 'Gerente' && (b.recebido||0) > 0).forEach(b => _addReceb(b.data, b.recebido, l.name, true));
             });
             const mesesCont = document.getElementById('fat-meses');
             if(mesesCont) {
@@ -2714,9 +2723,9 @@ window.toggleSidebar = function() {
                     mesesCont.innerHTML = ordenados.map(([rotulo, m]) => {
                         const itens = m.itens.sort((a,b) => a.dataOrd - b.dataOrd).map(it => `
                             <div class="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60 last:border-0">
-                                <span class="text-slate-400"><i class="fa-solid fa-calendar-day text-[9px] text-slate-600 mr-1.5"></i>${it.data}</span>
-                                <span class="text-slate-300 truncate max-w-[130px] mx-2">${it.cliente}</span>
-                                <span class="text-emerald-400 font-bold whitespace-nowrap">${formatCurrency(it.valor)}</span>
+                                <span class="text-slate-400 whitespace-nowrap"><i class="fa-solid fa-calendar-day text-[9px] text-slate-600 mr-1.5"></i>${it.data}</span>
+                                <span class="text-slate-300 truncate max-w-[110px] mx-2 flex items-center gap-1">${it.ehBonus ? '<i class="fa-solid fa-gift text-amber-400 text-[9px]" title="Bônus"></i>' : ''}${it.cliente}</span>
+                                <span class="${it.ehBonus ? 'text-amber-400' : 'text-emerald-400'} font-bold whitespace-nowrap">${formatCurrency(it.valor)}</span>
                             </div>`).join('');
                         return `<div class="glass p-4 rounded-2xl border border-slate-700/50">
                             <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/50">
