@@ -942,6 +942,28 @@ function doGet(e) {
                             </div>
                         </div>
 
+                        <!-- Comissões Recebidas (detalhe: quais comissões recebi) -->
+                        <div class="mb-8">
+                            <button onclick="toggleFatSection('fat-recebidas-wrap', this)" class="w-full text-left text-sm font-bold text-white uppercase tracking-wide mb-3 flex items-center gap-2 hover:text-emerald-300 transition-colors">
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform"></i>
+                                <i class="fa-solid fa-circle-check text-emerald-400"></i> Comissões Recebidas <span class="text-[11px] text-slate-500 font-normal normal-case tracking-normal">(cada recebimento do gerente, por data)</span>
+                            </button>
+                            <div id="fat-recebidas-wrap" class="glass rounded-2xl border border-slate-700/50 overflow-x-auto">
+                                <table class="w-full min-w-[640px]">
+                                    <thead>
+                                        <tr class="border-b border-slate-700/50 bg-slate-900/30">
+                                            <th class="text-left py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Recebido em</th>
+                                            <th class="text-left py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Cliente</th>
+                                            <th class="text-left py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mês Ref. (venda informada)</th>
+                                            <th class="text-left py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tipo</th>
+                                            <th class="text-right py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fat-recebidas-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
                         <!-- Tabela -->
                         <div class="glass rounded-2xl border border-slate-700/50 overflow-hidden">
                             <div class="px-5 py-3 border-b border-slate-700/50 flex items-center justify-between bg-slate-900/40">
@@ -1460,6 +1482,10 @@ function doGet(e) {
                                             <div><label class="text-[11px] text-slate-500 font-medium uppercase tracking-wide">Comissão Bruta</label><input type="text" id="ld-commission-value" class="w-full mt-1.5 px-3 py-2 rounded-lg text-sm auto-save-lead currency-mask" placeholder="R$ 0,00"></div>
                                         </div>
                                         <input type="hidden" id="ld-property-value" value="">
+                                        <div class="flex items-center justify-between text-xs px-3 py-2 bg-slate-800/40 rounded-xl border border-slate-700/40">
+                                            <span class="text-slate-500 uppercase tracking-wide font-semibold"><i class="fa-solid fa-calendar-day text-slate-600 mr-1"></i> Mês Referência <span class="normal-case font-normal text-slate-600">(venda informada)</span></span>
+                                            <span id="ld-mes-referencia" class="text-white font-bold capitalize">—</span>
+                                        </div>
                                         <div id="ld-sale-info" class="text-xs text-slate-500 p-3 bg-slate-800/40 rounded-xl border border-slate-700/40"></div>
                                     </div>
 

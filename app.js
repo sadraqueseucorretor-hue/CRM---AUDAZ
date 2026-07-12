@@ -2723,10 +2723,11 @@ window.toggleSidebar = function() {
                 if(integral) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30"><i class="fa-solid fa-flag-checkered text-[9px]"></i>Faturado Total</span>';
                 else if(recebido > 0) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">Parcial</span>';
                 else statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-600/30 text-slate-400 border border-slate-600/40">Pendente</span>';
+                const mesRef = mesRefDeDataBR(l.date) || '—';
                 return `<tr class="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors cursor-pointer" onclick="openLeadDetails('${l.id}')">
                     <td class="py-2.5 px-4 pl-8">
                         <div class="font-bold text-white text-sm">${l.numId ? '<span class="text-blue-400/70 text-[11px] mr-1">'+formatNumId(l.numId)+'</span>' : ''}${l.name}</div>
-                        <div class="text-[11px] text-slate-500">${l.broker || '—'}</div>
+                        <div class="text-[11px] text-slate-500">${l.broker || '—'} <span class="text-slate-600">· ref: ${mesRef}</span></div>
                     </td>
                     <td class="py-2.5 px-4 text-right text-sm font-bold text-white">${formatCurrency(total)}</td>
                     <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(recebido)}</td>
@@ -2763,6 +2764,36 @@ window.toggleSidebar = function() {
             set('fat-qtd', leadsTab.length);
             set('fat-recebido-pct', (totPrevista > 0 ? Math.min(100, Math.round(totRecebido/totPrevista*100)) : 0) + '%');
             set('fat-integral-qtd', qtdIntegral);
+
+            // ===== Comissões Recebidas (detalhe de cada recebimento) =====
+            const rtbody = document.getElementById('fat-recebidas-tbody');
+            if(rtbody) {
+                const recRows = [];
+                const _dBR = (d) => d ? String(d).split('-').reverse().join('/').replace(/^(\d{2}\/\d{2}\/\d{4}).*/, '$1') : '—';
+                base.forEach(l => {
+                    const mesRef = mesRefDeDataBR(l.date) || '—';
+                    (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => {
+                        const dt = _parseDataQualquer(r.data);
+                        recRows.push({ ord: dt ? dt.getTime() : 0, mesReceb: r.data ? labelMesComercial(r.data) : 'Sem data', dataBR: _dBR(r.data), cliente: l.name, mesRef, tipo: 'Comissão', valor: r.valor || 0 });
+                    });
+                    (l.bonuses || []).filter(b => b.beneficiario === 'Gerente' && (b.recebido||0) > 0).forEach(b => {
+                        const dt = _parseDataQualquer(b.data);
+                        recRows.push({ ord: dt ? dt.getTime() : 0, mesReceb: b.data ? labelMesComercial(b.data) : 'Sem data', dataBR: _dBR(b.data), cliente: l.name, mesRef, tipo: 'Bônus', valor: b.recebido || 0 });
+                    });
+                });
+                recRows.sort((a,b) => a.ord - b.ord);
+                if(recRows.length === 0) {
+                    rtbody.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-slate-500 text-sm"><i class="fa-regular fa-circle-check text-2xl block mb-2 opacity-50"></i>Nenhuma comissão recebida ainda.</td></tr>';
+                } else {
+                    rtbody.innerHTML = recRows.map(r => `<tr class="border-b border-slate-800/60 hover:bg-slate-800/30">
+                        <td class="py-2.5 px-4 text-sm"><span class="text-white font-semibold">${r.dataBR}</span> <span class="text-[11px] text-slate-500 capitalize">${r.mesReceb}</span></td>
+                        <td class="py-2.5 px-4 text-sm text-slate-300">${r.cliente}</td>
+                        <td class="py-2.5 px-4 text-sm text-slate-400 capitalize">${r.mesRef}</td>
+                        <td class="py-2.5 px-4"><span class="text-[10px] font-bold px-2 py-0.5 rounded ${r.tipo === 'Bônus' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}">${r.tipo}</span></td>
+                        <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(r.valor)}</td>
+                    </tr>`).join('') + `<tr class="bg-slate-900/60 border-t-2 border-slate-700"><td class="py-2.5 px-4 text-sm font-bold text-white uppercase" colspan="4">Total Recebido</td><td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(recRows.reduce((s,r)=>s+r.valor,0))}</td></tr>`;
+                }
+            }
         }
 
         // Exporta o Faturamento (leads visíveis no filtro atual) para CSV
@@ -3124,6 +3155,8 @@ window.toggleSidebar = function() {
             if(saleSection) {
                 if(lead.pipeline === 'financeiro') {
                     saleSection.classList.remove('hidden');
+                    const mrEl = document.getElementById('ld-mes-referencia');
+                    if(mrEl) mrEl.textContent = mesRefDeDataBR(lead.date) || '—';
                     const info = document.getElementById('ld-sale-info');
                     if(info) {
                         const parts = [];
