@@ -1394,44 +1394,58 @@ function doGet(e) {
                                         </div>
 
                                         <div id="ld-bonus-panel" class="hidden mt-4 p-4 rounded-xl bg-amber-500/5 border border-amber-500/30 space-y-4">
-                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                <div>
-                                                    <label class="text-slate-500 text-xs font-semibold uppercase">Beneficiário</label>
-                                                    <select id="ld-bonusBeneficiario" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead text-sm bg-slate-900 border border-slate-700">
-                                                        <option value="Corretor">Corretor</option>
-                                                        <option value="Gerente">Gerente</option>
-                                                    </select>
+                                            <!-- Formulário: adicionar bônus (igual ao registrar recebimento) -->
+                                            <div class="bg-slate-800/30 border border-slate-700/40 rounded-xl p-3.5">
+                                                <p class="text-[10px] font-semibold text-amber-400/80 uppercase tracking-wider mb-2.5">Adicionar bônus</p>
+                                                <div class="grid grid-cols-2 md:grid-cols-5 gap-2 items-end">
+                                                    <div>
+                                                        <label class="text-[10px] text-slate-500 uppercase">Beneficiário</label>
+                                                        <select id="ld-bonus-add-benef" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white">
+                                                            <option value="Corretor">Corretor</option>
+                                                            <option value="Gerente">Gerente</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="text-[10px] text-slate-500 uppercase">Valor</label>
+                                                        <input id="ld-bonus-add-valor" class="currency-mask w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white" placeholder="R$ 0,00">
+                                                    </div>
+                                                    <div>
+                                                        <label class="text-[10px] text-slate-500 uppercase">% Nota</label>
+                                                        <input type="number" id="ld-bonus-add-pct" min="0" max="100" step="0.1" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white" placeholder="Ex: 15">
+                                                    </div>
+                                                    <div>
+                                                        <label class="text-[10px] text-slate-500 uppercase">Recebido</label>
+                                                        <input id="ld-bonus-add-receb" class="currency-mask w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white" placeholder="R$ 0,00">
+                                                    </div>
+                                                    <div>
+                                                        <label class="text-[10px] text-slate-500 uppercase">Data</label>
+                                                        <input type="date" id="ld-bonus-add-data" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white">
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <label class="text-slate-500 text-xs font-semibold uppercase">Valor Total do Bônus</label>
-                                                    <input id="ld-valorBonus" oninput="recalcBonus()" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead currency-mask text-sm" placeholder="R$ 0,00">
-                                                </div>
-                                                <div>
-                                                    <label class="text-slate-500 text-xs font-semibold uppercase">% Nota do Bônus</label>
-                                                    <input type="number" id="ld-bonusPctNota" oninput="recalcBonus()" min="0" max="100" step="0.1" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead text-sm" placeholder="Ex: 15">
-                                                </div>
-                                                <div>
-                                                    <label class="text-slate-500 text-xs font-semibold uppercase">Recebido do Bônus</label>
-                                                    <input id="ld-bonusRecebido" oninput="recalcBonus()" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead currency-mask text-sm" placeholder="R$ 0,00">
-                                                </div>
-                                                <div>
-                                                    <label class="text-slate-500 text-xs font-semibold uppercase">Data do Recebimento</label>
-                                                    <input type="date" id="ld-bonusDataRecebido" class="w-full mt-2 px-4 py-2.5 rounded-md auto-save-lead text-sm">
-                                                </div>
+                                                <button onclick="addBonus()" class="mt-2.5 bg-amber-600/80 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1 transition-colors"><i class="fa-solid fa-plus text-xs"></i> Adicionar bônus</button>
                                             </div>
+                                            <!-- Resumo somado -->
                                             <div class="grid grid-cols-3 gap-3">
-                                                <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
-                                                    <p class="text-[10px] text-amber-400 uppercase font-bold tracking-wider">Desconto Nota</p>
-                                                    <p id="ld-bonus-desconto-display" class="text-amber-300 font-bold text-sm">R$ 0,00</p>
-                                                </div>
                                                 <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
                                                     <p class="text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Bônus Líquido</p>
                                                     <p id="ld-bonus-liquido-display" class="text-emerald-300 font-bold text-sm">R$ 0,00</p>
                                                 </div>
                                                 <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
-                                                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Falta Receber</p>
-                                                    <p id="ld-bonus-falta-display" class="text-slate-200 font-bold text-sm">R$ 0,00</p>
+                                                    <p class="text-[10px] text-blue-400 uppercase font-bold tracking-wider">Recebido</p>
+                                                    <p id="ld-bonus-recebido-display" class="text-blue-300 font-bold text-sm">R$ 0,00</p>
                                                 </div>
+                                                <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
+                                                    <p class="text-[10px] text-amber-400 uppercase font-bold tracking-wider">Falta Receber</p>
+                                                    <p id="ld-bonus-falta-display" class="text-amber-200 font-bold text-sm">R$ 0,00</p>
+                                                </div>
+                                            </div>
+                                            <!-- Lista de bônus -->
+                                            <div id="ld-bonus-lista" class="space-y-2"></div>
+                                            <!-- Compat: campos antigos ocultos (não remover — usados pelo auto-save/carregamento) -->
+                                            <div class="hidden">
+                                                <select id="ld-bonusBeneficiario"><option value="Corretor">Corretor</option><option value="Gerente">Gerente</option></select>
+                                                <input id="ld-valorBonus"><input type="number" id="ld-bonusPctNota"><input id="ld-bonusRecebido"><input type="date" id="ld-bonusDataRecebido">
+                                                <span id="ld-bonus-desconto-display"></span>
                                             </div>
                                         </div>
                                     </div>

@@ -368,18 +368,28 @@
             const ultimoRec = recs.length ? recs[recs.length-1] : null;
             const mesRec = ultimoRec ? mesRefDeDataBR(ultimoRec.data) : '';
             const detalheRec = recs.map(r => `${r.tipo} ${formatCurrency(r.valor)} (${r.data||''})`).join('; ');
-            // Bônus
+            // Bônus (agora é uma LISTA — soma os totais para a planilha)
             const temBonus = ehFin && lead.temBonus === 'Sim';
-            const bonusTotal = temBonus ? (lead.valorBonus || 0) : 0;
-            const bonusPctNota = temBonus ? (lead.bonusPctNota || 0) : 0;
-            const bonusDesconto = bonusTotal * bonusPctNota / 100;
-            const bonusLiquido = bonusTotal - bonusDesconto;
-            const bonusRecebido = temBonus ? (lead.bonusRecebido || 0) : 0;
+            const bonusList = temBonus ? _bonusesDoLead(lead) : [];
+            let bonusTotal = 0, bonusLiquido = 0, bonusRecebido = 0;
+            bonusList.forEach(b => {
+                const v = b.valor || 0, pct = b.pctNota || 0;
+                bonusTotal += v;
+                bonusLiquido += v - (v * pct / 100);
+                bonusRecebido += b.recebido || 0;
+            });
             const bonusFalta = Math.max(0, bonusLiquido - bonusRecebido);
-            // Data e mês de referência do recebimento do bônus
+            // Beneficiário: um só nome, ou "Vários" se misturado
+            const _benefs = [...new Set(bonusList.map(b => b.beneficiario).filter(Boolean))];
+            const bonusBenefLabel = _benefs.length === 0 ? '' : (_benefs.length === 1 ? _benefs[0] : 'Vários');
+            // % nota: mostra se todos iguais, senão vazio
+            const _pcts = [...new Set(bonusList.map(b => b.pctNota || 0))];
+            const bonusPctNota = (_pcts.length === 1 ? _pcts[0] : '');
+            // Data/mês do último recebimento de bônus com data
             let bonusDataReceb = '', bonusMesReceb = '';
-            if(temBonus && lead.bonusDataRecebido) {
-                const pb = lead.bonusDataRecebido.split('-'); // YYYY-MM-DD
+            const _comData = bonusList.filter(b => b.data).sort((a,b) => (a.data < b.data ? -1 : 1));
+            if(_comData.length) {
+                const pb = String(_comData[_comData.length-1].data).split('-'); // YYYY-MM-DD
                 if(pb.length === 3) {
                     bonusDataReceb = pb[2] + '/' + pb[1] + '/' + pb[0];
                     bonusMesReceb = MESES_PT[parseInt(pb[1],10)-1] + '/' + pb[0];
@@ -423,7 +433,7 @@
                         mesRecebimento: mesRec,
                         detalheRecebimentos: detalheRec,
                         temBonus: ehFin ? (lead.temBonus || 'Não') : '',
-                        bonusBeneficiario: temBonus ? (lead.bonusBeneficiario || 'Corretor') : '',
+                        bonusBeneficiario: temBonus ? bonusBenefLabel : '',
                         valorBonus: temBonus ? bonusTotal : '',
                         bonusPctNota: temBonus ? bonusPctNota : '',
                         bonusLiquido: temBonus ? bonusLiquido : '',
@@ -2627,27 +2637,105 @@ window.toggleSidebar = function() {
             }
         }
 
+        // Retorna a lista de bônus do lead, migrando do formato antigo (bônus único) se preciso
+        function _bonusesDoLead(lead) {
+            if(Array.isArray(lead.bonuses)) return lead.bonuses;
+            if(lead.temBonus === 'Sim' && (lead.valorBonus || lead.bonusRecebido)) {
+                lead.bonuses = [{
+                    id: generateId(),
+                    beneficiario: lead.bonusBeneficiario || 'Corretor',
+                    valor: lead.valorBonus || 0,
+                    pctNota: lead.bonusPctNota || 0,
+                    recebido: lead.bonusRecebido || 0,
+                    data: lead.bonusDataRecebido || ''
+                }];
+            } else {
+                lead.bonuses = [];
+            }
+            return lead.bonuses;
+        }
+
         // Mostra/esconde o painel de bônus conforme Sim/Não
         window.toggleBonus = function() {
             const sel = document.getElementById('ld-temBonus');
             const panel = document.getElementById('ld-bonus-panel');
             if(!sel || !panel) return;
-            if(sel.value === 'Sim') { panel.classList.remove('hidden'); recalcBonus(); }
-            else panel.classList.add('hidden');
+            if(sel.value === 'Sim') {
+                panel.classList.remove('hidden');
+                const lead = DB.leads.find(l => l.id === document.getElementById('ld-id').value);
+                if(lead) renderBonuses(lead);
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+        // mantida por compatibilidade (chamadas antigas) — sem efeito
+        window.recalcBonus = function() {};
+
+        // Renderiza a lista de bônus + resumo somado
+        window.renderBonuses = function(lead) {
+            const lista = document.getElementById('ld-bonus-lista');
+            if(!lista) return;
+            const bonuses = _bonusesDoLead(lead);
+            let totLiq = 0, totRec = 0;
+            bonuses.forEach(b => { const v=b.valor||0, p=b.pctNota||0; totLiq += v-(v*p/100); totRec += b.recebido||0; });
+            const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=formatCurrency(v); };
+            set('ld-bonus-liquido-display', totLiq);
+            set('ld-bonus-recebido-display', totRec);
+            set('ld-bonus-falta-display', Math.max(0, totLiq-totRec));
+
+            if(bonuses.length === 0) {
+                lista.innerHTML = '<p class="text-xs text-slate-500 italic py-1">Nenhum bônus adicionado.</p>';
+                return;
+            }
+            lista.innerHTML = bonuses.slice().reverse().map(b => {
+                const v=b.valor||0, p=b.pctNota||0; const liq=v-(v*p/100); const falta=Math.max(0,liq-(b.recebido||0));
+                const dataBR = b.data ? String(b.data).split('-').reverse().join('/') : '';
+                return `<div class="flex items-center justify-between bg-slate-800/40 border border-slate-700/40 rounded-lg px-3 py-2 gap-2">
+                    <div class="text-sm min-w-0">
+                        <span class="font-bold ${b.beneficiario === 'Gerente' ? 'text-purple-300' : 'text-blue-300'}">${b.beneficiario||'—'}</span>
+                        <span class="text-emerald-400 font-bold ml-2">${formatCurrency(liq)}</span>
+                        <span class="text-slate-500 text-xs ml-1">líq.</span>
+                        <span class="text-[11px] text-slate-500 ml-2">rec. ${formatCurrency(b.recebido||0)} · falta ${formatCurrency(falta)}${dataBR ? ' · '+dataBR : ''}</span>
+                    </div>
+                    <button onclick="removeBonus('${b.id}')" class="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1.5 rounded flex-shrink-0"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>`;
+            }).join('');
         }
 
-        // Recalcula desconto/líquido/falta do bônus
-        window.recalcBonus = function() {
-            const total = parseCurrency(document.getElementById('ld-valorBonus')?.value) || 0;
-            const pctNota = parseFloat(document.getElementById('ld-bonusPctNota')?.value) || 0;
-            const recebido = parseCurrency(document.getElementById('ld-bonusRecebido')?.value) || 0;
-            const desconto = total * pctNota / 100;
-            const liquido = total - desconto;
-            const falta = Math.max(0, liquido - recebido);
-            const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = formatCurrency(v); };
-            set('ld-bonus-desconto-display', desconto);
-            set('ld-bonus-liquido-display', liquido);
-            set('ld-bonus-falta-display', falta);
+        window.addBonus = function() {
+            const lead = DB.leads.find(l => l.id === document.getElementById('ld-id').value);
+            if(!lead) return;
+            const beneficiario = document.getElementById('ld-bonus-add-benef').value;
+            const valor = parseCurrency(document.getElementById('ld-bonus-add-valor').value);
+            const pctNota = parseFloat(document.getElementById('ld-bonus-add-pct').value) || 0;
+            const recebido = parseCurrency(document.getElementById('ld-bonus-add-receb').value) || 0;
+            const data = document.getElementById('ld-bonus-add-data').value;
+            if(!valor || valor <= 0) { showToast('Informe o valor do bônus.', 'error'); return; }
+            _bonusesDoLead(lead);
+            lead.bonuses.push({ id: generateId(), beneficiario, valor, pctNota, recebido, data });
+            lead.timeline = lead.timeline || [];
+            lead.timeline.unshift(`[${getTime()}] Bônus adicionado (${beneficiario}): ${formatCurrency(valor)}`);
+            saveLeadsDB();
+            sincronizarPlanilha(lead);
+            // limpa o formulário
+            document.getElementById('ld-bonus-add-valor').value = '';
+            document.getElementById('ld-bonus-add-pct').value = '';
+            document.getElementById('ld-bonus-add-receb').value = '';
+            document.getElementById('ld-bonus-add-data').value = '';
+            renderBonuses(lead);
+            renderTimeline(lead);
+            showToast('Bônus adicionado!', 'success');
+        }
+
+        window.removeBonus = function(bid) {
+            const lead = DB.leads.find(l => l.id === document.getElementById('ld-id').value);
+            if(!lead || !Array.isArray(lead.bonuses)) return;
+            if(!confirm('Remover este bônus?')) return;
+            lead.bonuses = lead.bonuses.filter(b => b.id !== bid);
+            saveLeadsDB();
+            sincronizarPlanilha(lead);
+            renderBonuses(lead);
+            showToast('Bônus removido.', 'info');
         }
 
         window.addRecebimento = function() {
