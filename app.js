@@ -2656,13 +2656,13 @@ window.toggleSidebar = function() {
             if(refIdx < 0) refIdx = 0;
             const stageIdx = {}; fin.forEach((s,i) => stageIdx[s.id] = i);
             base = base.filter(l => { const i = stageIdx[l.stageId]; return i !== undefined && i >= refIdx; });
-
-            // Distrato: leads em etapa "Distrato" saem do faturamento (não contam na comissão prevista)
-            base = base.filter(l => { const st = fin.find(s => s.id === l.stageId); return !st || !_norm(st.title).includes('distrato'); });
-
             if(busca) base = base.filter(l =>
                 (l.name||'').toLowerCase().includes(busca) || (l.broker||'').toLowerCase().includes(busca)
             );
+
+            // Distrato: aparece na tabela (p/ controle), mas NÃO conta em prevista/recebido/mensal
+            const _ehDistrato = (l) => { const st = fin.find(s => s.id === l.stageId); return !!st && _norm(st.title).includes('distrato'); };
+            const baseCalc = base.filter(l => !_ehDistrato(l));
 
             // ===== Popular o filtro de mês (união de meses gerados + recebidos) =====
             const mesesOrd = {}; // rótulo -> ord (menor timestamp)
@@ -2671,7 +2671,7 @@ window.toggleSidebar = function() {
                 const t = dt ? dt.getTime() : Infinity;
                 if(mesesOrd[rotulo] === undefined || t < mesesOrd[rotulo]) mesesOrd[rotulo] = t;
             };
-            base.forEach(l => {
+            baseCalc.forEach(l => {
                 _regMes(_fatMesGerado(l), l.saleDate || l.dataGanho || l.date);
                 (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => _regMes(r.data ? labelMesComercial(r.data) : 'Sem data', r.data));
                 (l.bonuses || []).filter(b => b.beneficiario === 'Gerente' && (b.recebido||0) > 0).forEach(b => _regMes(b.data ? labelMesComercial(b.data) : 'Sem data', b.data));
@@ -2686,7 +2686,7 @@ window.toggleSidebar = function() {
 
             // ===== Resumo Mensal (Gerado x Recebido x Saldo) =====
             const geradoMes = {}, recebidoMes = {};
-            base.forEach(l => {
+            baseCalc.forEach(l => {
                 const d = _fatDadosLead(l);
                 if(d.total > 0) geradoMes[_fatMesGerado(l)] = (geradoMes[_fatMesGerado(l)] || 0) + (l.comissaoGerente || 0) + ((l.bonuses||[]).filter(b=>b.beneficiario==='Gerente').reduce((s,b)=>{const v=b.valor||0,p=b.pctNota||0;return s+(v-v*p/100);},0));
                 (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => { const k = r.data ? labelMesComercial(r.data) : 'Sem data'; recebidoMes[k] = (recebidoMes[k]||0) + (r.valor||0); });
@@ -2721,21 +2721,23 @@ window.toggleSidebar = function() {
             window._fatLeadsExport = leadsTab; // p/ exportação
 
             let totPrevista = 0, totRecebido = 0, totFalta = 0, qtdIntegral = 0;
-            const linhaLead = (l) => {
+            const linhaLead = (l, ehDistrato) => {
                 const { total, recebido, falta, integral } = _fatDadosLead(l);
                 let statusBadge;
-                if(integral) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30"><i class="fa-solid fa-flag-checkered text-[9px]"></i>Faturado Total</span>';
+                if(ehDistrato) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-500/15 text-red-300 border border-red-500/30"><i class="fa-solid fa-file-circle-xmark text-[9px]"></i>Distrato</span>';
+                else if(integral) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30"><i class="fa-solid fa-flag-checkered text-[9px]"></i>Faturado Total</span>';
                 else if(recebido > 0) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">Parcial</span>';
                 else statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-600/30 text-slate-400 border border-slate-600/40">Pendente</span>';
                 const mesRef = mesRefDeDataBR(l.date) || '—';
-                return `<tr class="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors cursor-pointer" onclick="openLeadDetails('${l.id}')">
+                const dim = ehDistrato ? 'opacity-60' : '';
+                return `<tr class="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors cursor-pointer ${dim}" onclick="openLeadDetails('${l.id}')">
                     <td class="py-2.5 px-4 pl-8">
-                        <div class="font-bold text-white text-sm">${l.numId ? '<span class="text-blue-400/70 text-[11px] mr-1">'+formatNumId(l.numId)+'</span>' : ''}${l.name}</div>
+                        <div class="font-bold text-white text-sm ${ehDistrato ? 'line-through decoration-red-400/60' : ''}">${l.numId ? '<span class="text-blue-400/70 text-[11px] mr-1">'+formatNumId(l.numId)+'</span>' : ''}${l.name}</div>
                         <div class="text-[11px] text-slate-500">${l.broker || '—'} <span class="text-slate-600">· ref: ${mesRef}</span></div>
                     </td>
-                    <td class="py-2.5 px-4 text-right text-sm font-bold text-white">${formatCurrency(total)}</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold ${ehDistrato ? 'text-slate-500' : 'text-white'}">${formatCurrency(total)}</td>
                     <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(recebido)}</td>
-                    <td class="py-2.5 px-4 text-right text-sm font-bold ${falta > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatCurrency(falta)}</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold ${!ehDistrato && falta > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatCurrency(falta)}</td>
                     <td class="py-2.5 px-4 text-center">${statusBadge}</td>
                 </tr>`;
             };
@@ -2744,20 +2746,22 @@ window.toggleSidebar = function() {
             PIPELINES.financeiro.forEach(stage => {
                 const doStage = leadsTab.filter(l => l.stageId === stage.id);
                 if(doStage.length === 0) return;
+                const stageEhDistrato = _norm(stage.title).includes('distrato');
                 let sTotal = 0, sRec = 0, sFalta = 0;
-                doStage.forEach(l => { const d = _fatDadosLead(l); sTotal += d.total; sRec += d.recebido; sFalta += d.falta; if(d.integral) qtdIntegral++; });
-                totPrevista += sTotal; totRecebido += sRec; totFalta += sFalta;
+                doStage.forEach(l => { const d = _fatDadosLead(l); sTotal += d.total; sRec += d.recebido; sFalta += d.falta; if(d.integral && !stageEhDistrato) qtdIntegral++; });
+                // Distrato NÃO soma nos totais do faturamento
+                if(!stageEhDistrato) { totPrevista += sTotal; totRecebido += sRec; totFalta += sFalta; }
                 const cor = stage.color.replace('border-l-','bg-');
                 html += `<tr class="bg-slate-900/50">
                     <td class="py-2.5 px-4">
-                        <span class="inline-flex items-center gap-2 text-xs font-bold text-slate-200 uppercase tracking-wider"><span class="w-2.5 h-2.5 rounded-full ${cor}"></span>${stage.title}<span class="text-slate-500 font-semibold normal-case tracking-normal">· ${doStage.length}</span></span>
+                        <span class="inline-flex items-center gap-2 text-xs font-bold ${stageEhDistrato ? 'text-red-300' : 'text-slate-200'} uppercase tracking-wider"><span class="w-2.5 h-2.5 rounded-full ${cor}"></span>${stage.title}<span class="text-slate-500 font-semibold normal-case tracking-normal">· ${doStage.length}${stageEhDistrato ? ' · não conta' : ''}</span></span>
                     </td>
                     <td class="py-2.5 px-4 text-right text-[11px] font-bold text-slate-400">${formatCurrency(sTotal)}</td>
                     <td class="py-2.5 px-4 text-right text-[11px] font-bold text-emerald-400/80">${formatCurrency(sRec)}</td>
                     <td class="py-2.5 px-4 text-right text-[11px] font-bold text-amber-300/80">${formatCurrency(sFalta)}</td>
                     <td class="py-2.5 px-4"></td>
                 </tr>`;
-                html += doStage.map(linhaLead).join('');
+                html += doStage.map(l => linhaLead(l, stageEhDistrato)).join('');
             });
             tbody.innerHTML = html || '<tr><td colspan="5" class="py-16 text-center text-slate-500"><i class="fa-regular fa-folder-open text-3xl mb-3 block opacity-50"></i>Nenhuma venda no período selecionado.</td></tr>';
 
@@ -2774,7 +2778,7 @@ window.toggleSidebar = function() {
             if(rtbody) {
                 const recRows = [];
                 const _dBR = (d) => d ? String(d).split('-').reverse().join('/').replace(/^(\d{2}\/\d{2}\/\d{4}).*/, '$1') : '—';
-                base.forEach(l => {
+                baseCalc.forEach(l => {
                     const mesRef = mesRefDeDataBR(l.date) || '—';
                     (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => {
                         const dt = _parseDataQualquer(r.data);
