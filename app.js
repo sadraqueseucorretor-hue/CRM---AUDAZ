@@ -2785,13 +2785,27 @@ window.toggleSidebar = function() {
                 if(recRows.length === 0) {
                     rtbody.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-slate-500 text-sm"><i class="fa-regular fa-circle-check text-2xl block mb-2 opacity-50"></i>Nenhuma comissão recebida ainda.</td></tr>';
                 } else {
-                    rtbody.innerHTML = recRows.map(r => `<tr class="border-b border-slate-800/60 hover:bg-slate-800/30">
-                        <td class="py-2.5 px-4 text-sm"><span class="text-white font-semibold">${r.dataBR}</span> <span class="text-[11px] text-slate-500 capitalize">${r.mesReceb}</span></td>
-                        <td class="py-2.5 px-4 text-sm text-slate-300">${r.cliente}</td>
-                        <td class="py-2.5 px-4 text-sm text-slate-400 capitalize">${r.mesRef}</td>
-                        <td class="py-2.5 px-4"><span class="text-[10px] font-bold px-2 py-0.5 rounded ${r.tipo === 'Bônus' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}">${r.tipo}</span></td>
-                        <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(r.valor)}</td>
-                    </tr>`).join('') + `<tr class="bg-slate-900/60 border-t-2 border-slate-700"><td class="py-2.5 px-4 text-sm font-bold text-white uppercase" colspan="4">Total Recebido</td><td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(recRows.reduce((s,r)=>s+r.valor,0))}</td></tr>`;
+                    // Agrupa pelo MÊS em que foi recebido
+                    const grupos = {};
+                    recRows.forEach(r => { (grupos[r.mesReceb] = grupos[r.mesReceb] || { ord: r.ord, itens: [] }).itens.push(r); if(r.ord < grupos[r.mesReceb].ord) grupos[r.mesReceb].ord = r.ord; });
+                    const ordGrupos = Object.entries(grupos).sort((a,b) => a[1].ord - b[1].ord);
+                    let out = '';
+                    ordGrupos.forEach(([mes, g]) => {
+                        const subtotal = g.itens.reduce((s,r) => s + r.valor, 0);
+                        out += `<tr class="bg-slate-900/50">
+                            <td class="py-2.5 px-4" colspan="4"><span class="inline-flex items-center gap-2 text-xs font-bold text-slate-200 uppercase tracking-wider capitalize"><i class="fa-solid fa-calendar-check text-emerald-400 text-[11px]"></i>${mes}<span class="text-slate-500 font-semibold normal-case tracking-normal">· ${g.itens.length} receb.</span></span></td>
+                            <td class="py-2.5 px-4 text-right text-[11px] font-bold text-emerald-400/80">${formatCurrency(subtotal)}</td>
+                        </tr>`;
+                        out += g.itens.map(r => `<tr class="border-b border-slate-800/60 hover:bg-slate-800/30">
+                            <td class="py-2.5 px-4 pl-8 text-sm text-white font-semibold">${r.dataBR}</td>
+                            <td class="py-2.5 px-4 text-sm text-slate-300">${r.cliente}</td>
+                            <td class="py-2.5 px-4 text-sm text-slate-400 capitalize">${r.mesRef}</td>
+                            <td class="py-2.5 px-4"><span class="text-[10px] font-bold px-2 py-0.5 rounded ${r.tipo === 'Bônus' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}">${r.tipo}</span></td>
+                            <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(r.valor)}</td>
+                        </tr>`).join('');
+                    });
+                    out += `<tr class="bg-slate-900/60 border-t-2 border-slate-700"><td class="py-2.5 px-4 text-sm font-bold text-white uppercase" colspan="4">Total Recebido</td><td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(recRows.reduce((s,r)=>s+r.valor,0))}</td></tr>`;
+                    rtbody.innerHTML = out;
                 }
             }
         }
