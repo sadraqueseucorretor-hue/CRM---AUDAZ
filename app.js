@@ -2615,37 +2615,54 @@ window.toggleSidebar = function() {
             );
 
             let totPrevista = 0, totRecebido = 0, totFalta = 0, qtdIntegral = 0;
-            const linhas = leads.map(l => {
+            const dadosLead = (l) => {
                 const total = l.comissaoGerente || 0;
                 const recebido = (l.recebimentos || []).filter(r => r.tipo === 'Gerente').reduce((s,r) => s + (r.valor||0), 0);
                 const falta = Math.max(0, total - recebido);
-                const stage = PIPELINES.financeiro.find(s => s.id === l.stageId);
-                const stageTitle = stage ? stage.title : '—';
-                const stageColor = stage ? stage.color.replace('border-l-','bg-') : 'bg-slate-500';
-                // "Recebido Integral" (última etapa) OU falta zerada = faturado total
                 const integral = (l.stageId === 'recebido-integral') || (total > 0 && falta === 0);
-                totPrevista += total; totRecebido += recebido; totFalta += falta;
-                if(integral) qtdIntegral++;
-
+                return { total, recebido, falta, integral };
+            };
+            const linhaLead = (l) => {
+                const { total, recebido, falta, integral } = dadosLead(l);
                 let statusBadge;
                 if(integral) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30"><i class="fa-solid fa-flag-checkered text-[9px]"></i>Faturado Total</span>';
                 else if(recebido > 0) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">Parcial</span>';
                 else statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-600/30 text-slate-400 border border-slate-600/40">Pendente</span>';
-
                 return `<tr class="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors cursor-pointer" onclick="openLeadDetails('${l.id}')">
-                    <td class="py-3 px-4">
+                    <td class="py-2.5 px-4 pl-8">
                         <div class="font-bold text-white text-sm">${l.numId ? '<span class="text-blue-400/70 text-[11px] mr-1">'+formatNumId(l.numId)+'</span>' : ''}${l.name}</div>
                         <div class="text-[11px] text-slate-500">${l.broker || '—'}</div>
                     </td>
-                    <td class="py-3 px-4"><span class="inline-flex items-center gap-1.5 text-xs text-slate-300"><span class="w-2 h-2 rounded-full ${stageColor}"></span>${stageTitle}</span></td>
-                    <td class="py-3 px-4 text-right text-sm font-bold text-white">${formatCurrency(total)}</td>
-                    <td class="py-3 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(recebido)}</td>
-                    <td class="py-3 px-4 text-right text-sm font-bold ${falta > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatCurrency(falta)}</td>
-                    <td class="py-3 px-4 text-center">${statusBadge}</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold text-white">${formatCurrency(total)}</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(recebido)}</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold ${falta > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatCurrency(falta)}</td>
+                    <td class="py-2.5 px-4 text-center">${statusBadge}</td>
                 </tr>`;
-            }).join('');
+            };
 
-            tbody.innerHTML = linhas || '<tr><td colspan="6" class="py-16 text-center text-slate-500"><i class="fa-regular fa-folder-open text-3xl mb-3 block opacity-50"></i>Nenhuma venda no Ganho ainda.</td></tr>';
+            // Agrupa por ETAPA do Ganho, na ordem do pipeline
+            let html = '';
+            PIPELINES.financeiro.forEach(stage => {
+                const doStage = leads.filter(l => l.stageId === stage.id);
+                if(doStage.length === 0) return;
+                let sTotal = 0, sRec = 0, sFalta = 0;
+                doStage.forEach(l => { const d = dadosLead(l); sTotal += d.total; sRec += d.recebido; sFalta += d.falta; if(d.integral) qtdIntegral++; });
+                totPrevista += sTotal; totRecebido += sRec; totFalta += sFalta;
+                const cor = stage.color.replace('border-l-','bg-');
+                // Cabeçalho da etapa (com subtotais)
+                html += `<tr class="bg-slate-900/50">
+                    <td class="py-2.5 px-4">
+                        <span class="inline-flex items-center gap-2 text-xs font-bold text-slate-200 uppercase tracking-wider"><span class="w-2.5 h-2.5 rounded-full ${cor}"></span>${stage.title}<span class="text-slate-500 font-semibold normal-case tracking-normal">· ${doStage.length}</span></span>
+                    </td>
+                    <td class="py-2.5 px-4 text-right text-[11px] font-bold text-slate-400">${formatCurrency(sTotal)}</td>
+                    <td class="py-2.5 px-4 text-right text-[11px] font-bold text-emerald-400/80">${formatCurrency(sRec)}</td>
+                    <td class="py-2.5 px-4 text-right text-[11px] font-bold text-amber-300/80">${formatCurrency(sFalta)}</td>
+                    <td class="py-2.5 px-4"></td>
+                </tr>`;
+                html += doStage.map(linhaLead).join('');
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="5" class="py-16 text-center text-slate-500"><i class="fa-regular fa-folder-open text-3xl mb-3 block opacity-50"></i>Nenhuma venda no Ganho ainda.</td></tr>';
 
             const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent = v; };
             set('fat-prevista', formatCurrency(totPrevista));
