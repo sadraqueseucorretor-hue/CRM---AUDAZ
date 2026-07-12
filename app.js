@@ -1378,11 +1378,12 @@
                     renderUsersTable();
                 } else if(view === 'agenda') {
                     document.getElementById('view-agenda').classList.remove('hidden');
-                } else if(['equipe','relatorios'].includes(view)) {
+                } else if(['equipe','relatorios','faturamento'].includes(view)) {
                     document.getElementById('view-placeholder').classList.remove('hidden');
                     const map = {
                         equipe: { icon: 'fa-user-tie', title: 'Equipe', desc: 'Em breve: gestão completa de corretores, gerentes e permissões.' },
-                        relatorios: { icon: 'fa-chart-line', title: 'Relatórios', desc: 'Em breve: relatórios detalhados de performance, conversão e financeiro.' }
+                        relatorios: { icon: 'fa-chart-line', title: 'Relatórios', desc: 'Em breve: relatórios detalhados de performance, conversão e financeiro.' },
+                        faturamento: { icon: 'fa-file-invoice-dollar', title: 'Faturamento', desc: 'Em breve: controle de faturamento, notas e recebimentos da operação.' }
                     };
                     const data = map[view];
                     document.getElementById('placeholder-icon').className = `fa-solid ${data.icon} text-6xl text-primary`;
