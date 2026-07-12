@@ -2656,6 +2656,10 @@ window.toggleSidebar = function() {
             if(refIdx < 0) refIdx = 0;
             const stageIdx = {}; fin.forEach((s,i) => stageIdx[s.id] = i);
             base = base.filter(l => { const i = stageIdx[l.stageId]; return i !== undefined && i >= refIdx; });
+
+            // Distrato: leads em etapa "Distrato" saem do faturamento (não contam na comissão prevista)
+            base = base.filter(l => { const st = fin.find(s => s.id === l.stageId); return !st || !_norm(st.title).includes('distrato'); });
+
             if(busca) base = base.filter(l =>
                 (l.name||'').toLowerCase().includes(busca) || (l.broker||'').toLowerCase().includes(busca)
             );
