@@ -2738,6 +2738,45 @@ window.toggleSidebar = function() {
                     }).join('');
                 }
             }
+
+            // ===== Comissões GERADAS por Mês (comissão do gerente, pela data do Ganho/venda) =====
+            const gerados = {}; // rótulo do mês -> { total, ord, itens:[{data, dataOrd, valor, cliente}] }
+            leads.forEach(l => {
+                const total = l.comissaoGerente || 0;
+                if(total <= 0) return;
+                const dref = l.saleDate || l.dataGanho || l.date || '';
+                const dt = _parseDataQualquer(dref);
+                const rotulo = dref ? labelMesComercial(dref) : 'Sem data';
+                if(!gerados[rotulo]) gerados[rotulo] = { total: 0, ord: dt ? dt.getTime() : Infinity, itens: [] };
+                gerados[rotulo].total += total;
+                if(dt && dt.getTime() < gerados[rotulo].ord) gerados[rotulo].ord = dt.getTime();
+                const dataFmt = dref ? String(dref).split('-').reverse().join('/').replace(/^(\d{2}\/\d{2}\/\d{4}).*/, '$1') : '—';
+                gerados[rotulo].itens.push({ dataOrd: dt ? dt.getTime() : 0, data: dataFmt, valor: total, cliente: l.name });
+            });
+            const gerCont = document.getElementById('fat-geradas');
+            if(gerCont) {
+                const ord = Object.entries(gerados).sort((a,b) => a[1].ord - b[1].ord);
+                if(ord.length === 0) {
+                    gerCont.innerHTML = '<div class="glass p-5 rounded-2xl border border-slate-700/50 text-sm text-slate-500 md:col-span-3 text-center"><i class="fa-regular fa-calendar text-2xl block mb-2 opacity-50"></i>Nenhuma comissão de gerente gerada ainda.</div>';
+                } else {
+                    gerCont.innerHTML = ord.map(([rotulo, m]) => {
+                        const itens = m.itens.sort((a,b) => a.dataOrd - b.dataOrd).map(it => `
+                            <div class="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60 last:border-0">
+                                <span class="text-slate-400 whitespace-nowrap"><i class="fa-solid fa-calendar-day text-[9px] text-slate-600 mr-1.5"></i>${it.data}</span>
+                                <span class="text-slate-300 truncate max-w-[120px] mx-2">${it.cliente}</span>
+                                <span class="text-purple-300 font-bold whitespace-nowrap">${formatCurrency(it.valor)}</span>
+                            </div>`).join('');
+                        return `<div class="glass p-4 rounded-2xl border border-slate-700/50">
+                            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/50">
+                                <span class="text-sm font-bold text-white capitalize">${rotulo}</span>
+                                <span class="text-purple-300 font-bold text-sm">${formatCurrency(m.total)}</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-1">${m.itens.length} venda${m.itens.length>1?'s':''}</div>
+                            <div>${itens}</div>
+                        </div>`;
+                    }).join('');
+                }
+            }
         }
 
         function renderControleComissao(lead) {
