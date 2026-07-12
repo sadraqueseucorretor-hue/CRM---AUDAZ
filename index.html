@@ -925,7 +925,7 @@ function doGet(e) {
                         <div class="mb-8">
                             <button onclick="toggleFatSection('fat-mensal-wrap', this)" class="w-full text-left text-sm font-bold text-white uppercase tracking-wide mb-3 flex items-center gap-2 hover:text-blue-300 transition-colors">
                                 <i class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform"></i>
-                                <i class="fa-solid fa-calendar-week text-blue-400"></i> Resumo Mensal <span class="text-[11px] text-slate-500 font-normal normal-case tracking-normal">(gerado pela data do Ganho · recebido pela data do recebimento)</span>
+                                <i class="fa-solid fa-calendar-week text-blue-400"></i> Resumo Mensal <span class="text-[11px] text-slate-500 font-normal normal-case tracking-normal">(do que foi gerado no mês: quanto já recebi e quanto falta)</span>
                             </button>
                             <div id="fat-mensal-wrap" class="glass rounded-2xl border border-slate-700/50 overflow-x-auto">
                                 <table class="w-full min-w-[560px]">
@@ -934,7 +934,7 @@ function doGet(e) {
                                             <th class="text-left py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mês</th>
                                             <th class="text-right py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Gerado</th>
                                             <th class="text-right py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Recebido</th>
-                                            <th class="text-right py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Saldo (Falta)</th>
+                                            <th class="text-right py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Falta Receber</th>
                                         </tr>
                                     </thead>
                                     <tbody id="fat-mensal-tbody"></tbody>

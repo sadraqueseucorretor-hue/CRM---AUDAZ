@@ -2684,35 +2684,39 @@ window.toggleSidebar = function() {
                 if(mesesLista.includes(atual) || atual === '') selEl.value = atual;
             }
 
-            // ===== Resumo Mensal (Gerado x Recebido x Saldo) =====
-            const geradoMes = {}, recebidoMes = {};
+            // ===== Resumo Mensal por SAFRA (do que foi GERADO no mês: quanto recebi e quanto falta) =====
+            const cohort = {}; // mês de geração -> { gerado, recebido, falta }
             baseCalc.forEach(l => {
                 const d = _fatDadosLead(l);
-                if(d.total > 0) geradoMes[_fatMesGerado(l)] = (geradoMes[_fatMesGerado(l)] || 0) + (l.comissaoGerente || 0) + ((l.bonuses||[]).filter(b=>b.beneficiario==='Gerente').reduce((s,b)=>{const v=b.valor||0,p=b.pctNota||0;return s+(v-v*p/100);},0));
-                (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => { const k = r.data ? labelMesComercial(r.data) : 'Sem data'; recebidoMes[k] = (recebidoMes[k]||0) + (r.valor||0); });
-                (l.bonuses || []).filter(b => b.beneficiario === 'Gerente' && (b.recebido||0) > 0).forEach(b => { const k = b.data ? labelMesComercial(b.data) : 'Sem data'; recebidoMes[k] = (recebidoMes[k]||0) + (b.recebido||0); });
+                if(d.total <= 0) return;
+                const m = _fatMesGerado(l);
+                if(!cohort[m]) cohort[m] = { gerado: 0, recebido: 0, falta: 0 };
+                cohort[m].gerado += d.total;
+                cohort[m].recebido += d.recebido;
+                cohort[m].falta += d.falta;
             });
             const mtbody = document.getElementById('fat-mensal-tbody');
             if(mtbody) {
-                let tg=0, tr=0;
-                const linhasM = mesesLista.map(m => {
-                    const g = geradoMes[m] || 0, r = recebidoMes[m] || 0, saldo = g - r;
-                    tg += g; tr += r;
+                const mesesCohort = Object.keys(cohort).sort((a,b) => (mesesOrd[a] ?? Infinity) - (mesesOrd[b] ?? Infinity));
+                let tg=0, tr=0, tf=0;
+                const linhasM = mesesCohort.map(m => {
+                    const c = cohort[m]; tg += c.gerado; tr += c.recebido; tf += c.falta;
+                    const pct = c.gerado > 0 ? Math.min(100, Math.round(c.recebido/c.gerado*100)) : 0;
                     const sel = (m === mesFiltro);
                     return `<tr class="border-b border-slate-800/60 ${sel ? 'bg-blue-500/10' : 'hover:bg-slate-800/30'}">
                         <td class="py-2.5 px-4 text-sm font-bold text-white capitalize">${sel ? '<i class="fa-solid fa-caret-right text-blue-400 mr-1"></i>' : ''}${m}</td>
-                        <td class="py-2.5 px-4 text-right text-sm font-bold text-purple-300">${formatCurrency(g)}</td>
-                        <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(r)}</td>
-                        <td class="py-2.5 px-4 text-right text-sm font-bold ${saldo > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatCurrency(saldo)}</td>
+                        <td class="py-2.5 px-4 text-right text-sm font-bold text-purple-300">${formatCurrency(c.gerado)}</td>
+                        <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(c.recebido)} <span class="text-[10px] text-slate-500">(${pct}%)</span></td>
+                        <td class="py-2.5 px-4 text-right text-sm font-bold ${c.falta > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatCurrency(c.falta)}</td>
                     </tr>`;
                 }).join('');
                 const totalRow = `<tr class="bg-slate-900/60 border-t-2 border-slate-700">
                     <td class="py-2.5 px-4 text-sm font-bold text-white uppercase tracking-wide">Total</td>
                     <td class="py-2.5 px-4 text-right text-sm font-bold text-purple-300">${formatCurrency(tg)}</td>
                     <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(tr)}</td>
-                    <td class="py-2.5 px-4 text-right text-sm font-bold ${(tg-tr)>0?'text-amber-300':'text-slate-500'}">${formatCurrency(tg-tr)}</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold ${tf>0?'text-amber-300':'text-slate-500'}">${formatCurrency(tf)}</td>
                 </tr>`;
-                mtbody.innerHTML = mesesLista.length ? (linhasM + totalRow) : '<tr><td colspan="4" class="py-10 text-center text-slate-500 text-sm">Sem dados ainda.</td></tr>';
+                mtbody.innerHTML = mesesCohort.length ? (linhasM + totalRow) : '<tr><td colspan="4" class="py-10 text-center text-slate-500 text-sm">Sem dados ainda.</td></tr>';
             }
 
             // ===== Tabela de leads (aplica o filtro de mês pela data de GERAÇÃO) =====
