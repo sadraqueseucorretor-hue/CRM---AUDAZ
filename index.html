@@ -921,7 +921,28 @@ function doGet(e) {
                             </div>
                         </div>
 
-                        <!-- Resumo Mensal (Gerado / Recebido / Saldo) -->
+                        <!-- Movimento por Mês (caixa: gerado no mês x recebido no mês) -->
+                        <div class="mb-8">
+                            <button onclick="toggleFatSection('fat-caixa-wrap', this)" class="w-full text-left text-sm font-bold text-white uppercase tracking-wide mb-3 flex items-center gap-2 hover:text-cyan-300 transition-colors">
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform"></i>
+                                <i class="fa-solid fa-arrow-right-arrow-left text-cyan-400"></i> Movimento por Mês <span class="text-[11px] text-slate-500 font-normal normal-case tracking-normal">(gerado no mês · recebido no mês · saldo)</span>
+                            </button>
+                            <div id="fat-caixa-wrap" class="glass rounded-2xl border border-slate-700/50 overflow-x-auto">
+                                <table class="w-full min-w-[560px]">
+                                    <thead>
+                                        <tr class="border-b border-slate-700/50 bg-slate-900/30">
+                                            <th class="text-left py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mês</th>
+                                            <th class="text-right py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Gerado no Mês</th>
+                                            <th class="text-right py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Recebido no Mês</th>
+                                            <th class="text-right py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Saldo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fat-caixa-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Resumo Mensal por Safra (Gerado / Recebido dele / Falta) -->
                         <div class="mb-8">
                             <button onclick="toggleFatSection('fat-mensal-wrap', this)" class="w-full text-left text-sm font-bold text-white uppercase tracking-wide mb-3 flex items-center gap-2 hover:text-blue-300 transition-colors">
                                 <i class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform"></i>

@@ -2684,17 +2684,47 @@ window.toggleSidebar = function() {
                 if(mesesLista.includes(atual) || atual === '') selEl.value = atual;
             }
 
-            // ===== Resumo Mensal por SAFRA (do que foi GERADO no mês: quanto recebi e quanto falta) =====
+            // ===== Movimento por Mês (CAIXA): gerado no mês x recebido no mês =====
+            // ===== Resumo por SAFRA: do que foi gerado no mês, quanto recebi e quanto falta =====
+            const geradoMes = {}, recebidoMes = {};
             const cohort = {}; // mês de geração -> { gerado, recebido, falta }
             baseCalc.forEach(l => {
                 const d = _fatDadosLead(l);
-                if(d.total <= 0) return;
-                const m = _fatMesGerado(l);
-                if(!cohort[m]) cohort[m] = { gerado: 0, recebido: 0, falta: 0 };
-                cohort[m].gerado += d.total;
-                cohort[m].recebido += d.recebido;
-                cohort[m].falta += d.falta;
+                if(d.total > 0) {
+                    const m = _fatMesGerado(l);
+                    geradoMes[m] = (geradoMes[m] || 0) + d.total; // caixa: gerado no mês
+                    if(!cohort[m]) cohort[m] = { gerado: 0, recebido: 0, falta: 0 };
+                    cohort[m].gerado += d.total;
+                    cohort[m].recebido += d.recebido;
+                    cohort[m].falta += d.falta;
+                }
+                // caixa: recebido pela data de cada recebimento
+                (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => { const k = r.data ? labelMesComercial(r.data) : 'Sem data'; recebidoMes[k] = (recebidoMes[k]||0) + (r.valor||0); });
+                (l.bonuses || []).filter(b => b.beneficiario === 'Gerente' && (b.recebido||0) > 0).forEach(b => { const k = b.data ? labelMesComercial(b.data) : 'Sem data'; recebidoMes[k] = (recebidoMes[k]||0) + (b.recebido||0); });
             });
+
+            // Tabela CAIXA (movimento por mês)
+            const ctbody = document.getElementById('fat-caixa-tbody');
+            if(ctbody) {
+                let tg=0, tr=0;
+                const linhas = mesesLista.map(m => {
+                    const g = geradoMes[m] || 0, r = recebidoMes[m] || 0, saldo = g - r;
+                    tg += g; tr += r;
+                    const sel = (m === mesFiltro);
+                    return `<tr class="border-b border-slate-800/60 ${sel ? 'bg-blue-500/10' : 'hover:bg-slate-800/30'}">
+                        <td class="py-2.5 px-4 text-sm font-bold text-white capitalize">${sel ? '<i class="fa-solid fa-caret-right text-blue-400 mr-1"></i>' : ''}${m}</td>
+                        <td class="py-2.5 px-4 text-right text-sm font-bold text-purple-300">${formatCurrency(g)}</td>
+                        <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(r)}</td>
+                        <td class="py-2.5 px-4 text-right text-sm font-bold ${saldo > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatCurrency(saldo)}</td>
+                    </tr>`;
+                }).join('');
+                ctbody.innerHTML = mesesLista.length ? (linhas + `<tr class="bg-slate-900/60 border-t-2 border-slate-700">
+                    <td class="py-2.5 px-4 text-sm font-bold text-white uppercase tracking-wide">Total</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold text-purple-300">${formatCurrency(tg)}</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(tr)}</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold ${(tg-tr)>0?'text-amber-300':'text-slate-500'}">${formatCurrency(tg-tr)}</td>
+                </tr>`) : '<tr><td colspan="4" class="py-10 text-center text-slate-500 text-sm">Sem dados ainda.</td></tr>';
+            }
             const mtbody = document.getElementById('fat-mensal-tbody');
             if(mtbody) {
                 const mesesCohort = Object.keys(cohort).sort((a,b) => (mesesOrd[a] ?? Infinity) - (mesesOrd[b] ?? Infinity));
