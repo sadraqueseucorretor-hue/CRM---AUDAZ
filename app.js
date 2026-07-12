@@ -2833,13 +2833,16 @@ window.toggleSidebar = function() {
                 const v=b.valor||0, p=b.pctNota||0; const liq=v-(v*p/100); const falta=Math.max(0,liq-(b.recebido||0));
                 const dataBR = b.data ? String(b.data).split('-').reverse().join('/') : '';
                 return `<div class="flex items-center justify-between bg-slate-800/40 border border-slate-700/40 rounded-lg px-3 py-2 gap-2">
-                    <div class="text-sm min-w-0">
-                        <span class="font-bold ${b.beneficiario === 'Gerente' ? 'text-purple-300' : 'text-blue-300'}">${b.beneficiario||'—'}</span>
-                        <span class="text-emerald-400 font-bold ml-2">${formatCurrency(liq)}</span>
-                        <span class="text-slate-500 text-xs ml-1">líq.</span>
-                        <span class="text-[11px] text-slate-500 ml-2">rec. ${formatCurrency(b.recebido||0)} · falta ${formatCurrency(falta)}${dataBR ? ' · '+dataBR : ''}</span>
+                    <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded ${b.beneficiario === 'Gerente' ? 'bg-purple-500/15 text-purple-300' : 'bg-blue-500/15 text-blue-300'}">${b.beneficiario||'—'}</span>
+                        <span class="text-emerald-400 font-bold text-sm">${formatCurrency(liq)}</span>
+                        <span class="text-[11px] text-slate-500">líq.${p>0?' ('+p+'% nota)':''}</span>
+                        ${dataBR ? `<span class="text-[11px] text-slate-500"><i class="fa-solid fa-calendar-day text-[9px] mr-1"></i>${dataBR}</span>` : ''}
                     </div>
-                    <button onclick="removeBonus('${b.id}')" class="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1.5 rounded flex-shrink-0"><i class="fa-solid fa-trash text-xs"></i></button>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="text-[11px] text-slate-400">rec. <b class="text-emerald-400">${formatCurrency(b.recebido||0)}</b> · falta <b class="text-amber-300">${formatCurrency(falta)}</b></span>
+                        <button onclick="removeBonus('${b.id}')" class="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1.5 rounded"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>
                 </div>`;
             }).join('');
         }
@@ -2851,7 +2854,10 @@ window.toggleSidebar = function() {
             const valor = parseCurrency(document.getElementById('ld-bonus-add-valor').value);
             const pctNota = parseFloat(document.getElementById('ld-bonus-add-pct').value) || 0;
             const recebido = parseCurrency(document.getElementById('ld-bonus-add-receb').value) || 0;
-            const data = document.getElementById('ld-bonus-add-data').value;
+            // Sem data preenchida → usa a data de hoje (igual ao recebimento da comissão)
+            const _d = new Date();
+            const hojeISO = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
+            const data = document.getElementById('ld-bonus-add-data').value || hojeISO;
             if(!valor || valor <= 0) { showToast('Informe o valor do bônus.', 'error'); return; }
             _bonusesDoLead(lead);
             lead.bonuses.push({ id: generateId(), beneficiario, valor, pctNota, recebido, data });

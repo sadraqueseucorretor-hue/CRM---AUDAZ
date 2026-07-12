@@ -1466,38 +1466,8 @@ function doGet(e) {
                                         </div>
 
                                         <div id="ld-bonus-panel" class="hidden mt-4 p-4 rounded-xl bg-amber-500/5 border border-amber-500/30 space-y-4">
-                                            <!-- Formulário: adicionar bônus (igual ao registrar recebimento) -->
-                                            <div class="bg-slate-800/30 border border-slate-700/40 rounded-xl p-3.5">
-                                                <p class="text-[10px] font-semibold text-amber-400/80 uppercase tracking-wider mb-2.5">Adicionar bônus</p>
-                                                <div class="grid grid-cols-2 md:grid-cols-5 gap-2 items-end">
-                                                    <div>
-                                                        <label class="text-[10px] text-slate-500 uppercase">Beneficiário</label>
-                                                        <select id="ld-bonus-add-benef" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white">
-                                                            <option value="Corretor">Corretor</option>
-                                                            <option value="Gerente">Gerente</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label class="text-[10px] text-slate-500 uppercase">Valor</label>
-                                                        <input id="ld-bonus-add-valor" class="currency-mask w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white" placeholder="R$ 0,00">
-                                                    </div>
-                                                    <div>
-                                                        <label class="text-[10px] text-slate-500 uppercase">% Nota</label>
-                                                        <input type="number" id="ld-bonus-add-pct" min="0" max="100" step="0.1" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white" placeholder="Ex: 15">
-                                                    </div>
-                                                    <div>
-                                                        <label class="text-[10px] text-slate-500 uppercase">Recebido</label>
-                                                        <input id="ld-bonus-add-receb" class="currency-mask w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white" placeholder="R$ 0,00">
-                                                    </div>
-                                                    <div>
-                                                        <label class="text-[10px] text-slate-500 uppercase">Data</label>
-                                                        <input type="date" id="ld-bonus-add-data" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white">
-                                                    </div>
-                                                </div>
-                                                <button onclick="addBonus()" class="mt-2.5 bg-amber-600/80 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1 transition-colors"><i class="fa-solid fa-plus text-xs"></i> Adicionar bônus</button>
-                                            </div>
                                             <!-- Resumo somado -->
-                                            <div class="grid grid-cols-3 gap-3">
+                                            <div class="grid grid-cols-3 gap-2">
                                                 <div class="bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
                                                     <p class="text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Bônus Líquido</p>
                                                     <p id="ld-bonus-liquido-display" class="text-emerald-300 font-bold text-sm">R$ 0,00</p>
@@ -1510,6 +1480,22 @@ function doGet(e) {
                                                     <p class="text-[10px] text-amber-400 uppercase font-bold tracking-wider">Falta Receber</p>
                                                     <p id="ld-bonus-falta-display" class="text-amber-200 font-bold text-sm">R$ 0,00</p>
                                                 </div>
+                                            </div>
+                                            <!-- Formulário: adicionar bônus (mesmo estilo do registrar recebimento) -->
+                                            <div class="bg-slate-800/30 border border-slate-700/40 rounded-xl p-3.5">
+                                                <p class="text-[10px] font-semibold text-amber-400/80 uppercase tracking-wider mb-2.5">Adicionar bônus</p>
+                                                <div class="flex flex-wrap gap-2 items-end">
+                                                    <select id="ld-bonus-add-benef" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
+                                                        <option value="Corretor">Corretor</option>
+                                                        <option value="Gerente">Gerente</option>
+                                                    </select>
+                                                    <input id="ld-bonus-add-valor" class="currency-mask bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white w-32" placeholder="Valor R$">
+                                                    <input type="number" id="ld-bonus-add-pct" min="0" max="100" step="0.1" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white w-24" placeholder="% Nota">
+                                                    <input id="ld-bonus-add-receb" class="currency-mask bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white w-32" placeholder="Recebido R$">
+                                                    <input type="date" id="ld-bonus-add-data" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
+                                                    <button onclick="addBonus()" class="bg-amber-600/80 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1 transition-colors"><i class="fa-solid fa-plus text-xs"></i> Add</button>
+                                                </div>
+                                                <p class="text-[10px] text-slate-500 mt-2">Sem data preenchida, entra com a data de hoje.</p>
                                             </div>
                                             <!-- Lista de bônus -->
                                             <div id="ld-bonus-lista" class="space-y-2"></div>
