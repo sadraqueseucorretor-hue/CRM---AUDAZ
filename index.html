@@ -876,13 +876,24 @@ function doGet(e) {
                 <!-- ============================================================== -->
                 <div id="view-faturamento" class="absolute inset-0 overflow-y-auto p-6 md:p-8 view-section hidden">
                     <div class="max-w-6xl mx-auto">
-                        <div class="flex items-center gap-3 mb-6">
-                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 border border-emerald-500/30 flex items-center justify-center">
-                                <i class="fa-solid fa-file-invoice-dollar text-emerald-300"></i>
+                        <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 border border-emerald-500/30 flex items-center justify-center">
+                                    <i class="fa-solid fa-file-invoice-dollar text-emerald-300"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-2xl font-bold text-white">Faturamento — Gerente</h2>
+                                    <p class="text-sm text-slate-400">Comissões do gerente: geradas, recebidas e o que falta (leads no Ganho)</p>
+                                </div>
                             </div>
-                            <div>
-                                <h2 class="text-2xl font-bold text-white">Faturamento — Gerente</h2>
-                                <p class="text-sm text-slate-400">Comissões do gerente: recebidas e o que falta receber (leads no Ganho)</p>
+                            <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+                                    <i class="fa-solid fa-calendar-day text-slate-500 text-xs"></i>
+                                    <select id="fat-mes-filtro" onchange="renderFaturamento()" class="bg-transparent text-sm text-white focus:outline-none cursor-pointer">
+                                        <option value="">Todo o período</option>
+                                    </select>
+                                </div>
+                                <button onclick="exportFaturamentoCSV()" class="bg-emerald-600/80 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"><i class="fa-solid fa-file-csv"></i> Exportar</button>
                             </div>
                         </div>
 
@@ -910,22 +921,25 @@ function doGet(e) {
                             </div>
                         </div>
 
-                        <!-- Comissões Geradas por Mês -->
+                        <!-- Resumo Mensal (Gerado / Recebido / Saldo) -->
                         <div class="mb-8">
-                            <button onclick="toggleFatSection('fat-geradas', this)" class="w-full text-left text-sm font-bold text-white uppercase tracking-wide mb-3 flex items-center gap-2 hover:text-purple-300 transition-colors">
+                            <button onclick="toggleFatSection('fat-mensal-wrap', this)" class="w-full text-left text-sm font-bold text-white uppercase tracking-wide mb-3 flex items-center gap-2 hover:text-blue-300 transition-colors">
                                 <i class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform"></i>
-                                <i class="fa-solid fa-calendar-plus text-purple-400"></i> Comissões Geradas por Mês <span class="text-[11px] text-slate-500 font-normal normal-case tracking-normal">(comissão do gerente, pela data do Ganho/venda)</span>
+                                <i class="fa-solid fa-calendar-week text-blue-400"></i> Resumo Mensal <span class="text-[11px] text-slate-500 font-normal normal-case tracking-normal">(gerado pela data do Ganho · recebido pela data do recebimento)</span>
                             </button>
-                            <div id="fat-geradas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-                        </div>
-
-                        <!-- Recebimentos por Mês -->
-                        <div class="mb-8">
-                            <button onclick="toggleFatSection('fat-meses', this)" class="w-full text-left text-sm font-bold text-white uppercase tracking-wide mb-3 flex items-center gap-2 hover:text-emerald-300 transition-colors">
-                                <i class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform"></i>
-                                <i class="fa-solid fa-calendar-check text-emerald-400"></i> Recebimentos por Mês <span class="text-[11px] text-slate-500 font-normal normal-case tracking-normal">(comissão do gerente, por data de recebimento)</span>
-                            </button>
-                            <div id="fat-meses" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                            <div id="fat-mensal-wrap" class="glass rounded-2xl border border-slate-700/50 overflow-x-auto">
+                                <table class="w-full min-w-[560px]">
+                                    <thead>
+                                        <tr class="border-b border-slate-700/50 bg-slate-900/30">
+                                            <th class="text-left py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mês</th>
+                                            <th class="text-right py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Gerado</th>
+                                            <th class="text-right py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Recebido</th>
+                                            <th class="text-right py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Saldo (Falta)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fat-mensal-tbody"></tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <!-- Tabela -->

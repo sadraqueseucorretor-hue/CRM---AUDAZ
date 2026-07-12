@@ -2620,17 +2620,34 @@ window.toggleSidebar = function() {
             if(chevron) chevron.style.transform = escondido ? 'rotate(-90deg)' : 'rotate(0deg)';
         }
 
+        // Dados de faturamento de um lead (comissão gerente + bônus gerente)
+        function _fatDadosLead(l) {
+            const gBonus = (l.bonuses || []).filter(b => b.beneficiario === 'Gerente');
+            const bonusPrev = gBonus.reduce((s,b) => { const v=b.valor||0, p=b.pctNota||0; return s + (v - v*p/100); }, 0);
+            const bonusRec = gBonus.reduce((s,b) => s + (b.recebido||0), 0);
+            const total = (l.comissaoGerente || 0) + bonusPrev;
+            const recComissao = (l.recebimentos || []).filter(r => r.tipo === 'Gerente').reduce((s,r) => s + (r.valor||0), 0);
+            const recebido = recComissao + bonusRec;
+            const falta = Math.max(0, total - recebido);
+            const integral = (l.stageId === 'recebido-integral') || (total > 0 && falta === 0);
+            return { total, recebido, falta, integral };
+        }
+        // Mês (rótulo comercial) em que a comissão do lead foi GERADA
+        function _fatMesGerado(l) {
+            const dref = l.saleDate || l.dataGanho || l.date || '';
+            return dref ? labelMesComercial(dref) : 'Sem data';
+        }
+
         window.renderFaturamento = function() {
             const tbody = document.getElementById('fat-tbody');
             if(!tbody) return;
             const busca = (document.getElementById('fat-search')?.value || '').toLowerCase();
+            const mesFiltro = document.getElementById('fat-mes-filtro')?.value || '';
 
             // Só leads no Ganho (financeiro), respeitando a visibilidade do usuário
-            let leads = getVisibleLeads().filter(l => l.pipeline === 'financeiro');
+            let base = getVisibleLeads().filter(l => l.pipeline === 'financeiro');
 
-            // Faturamento só considera de "Venda Gerada" pra frente — etapas anteriores
-            // (ex.: "Venda Informada") NÃO entram. Acha pelo NOME da etapa (mais confiável
-            // que o id, pois etapas renomeadas mantêm o id antigo).
+            // Faturamento só considera de "Venda Gerada" pra frente — acha pelo NOME da etapa
             const _norm = (s) => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
             const fin = PIPELINES.financeiro;
             let refIdx = fin.findIndex(s => _norm(s.title) === 'venda gerada');
@@ -2638,27 +2655,70 @@ window.toggleSidebar = function() {
             if(refIdx === -1) refIdx = fin.findIndex(s => s.id === 'venda-gerada');
             if(refIdx < 0) refIdx = 0;
             const stageIdx = {}; fin.forEach((s,i) => stageIdx[s.id] = i);
-            leads = leads.filter(l => { const i = stageIdx[l.stageId]; return i !== undefined && i >= refIdx; });
-
-            if(busca) leads = leads.filter(l =>
+            base = base.filter(l => { const i = stageIdx[l.stageId]; return i !== undefined && i >= refIdx; });
+            if(busca) base = base.filter(l =>
                 (l.name||'').toLowerCase().includes(busca) || (l.broker||'').toLowerCase().includes(busca)
             );
 
-            let totPrevista = 0, totRecebido = 0, totFalta = 0, qtdIntegral = 0;
-            const dadosLead = (l) => {
-                // Bônus do gerente (líquido previsto + já recebido) entram no faturamento
-                const gBonus = (l.bonuses || []).filter(b => b.beneficiario === 'Gerente');
-                const bonusPrev = gBonus.reduce((s,b) => { const v=b.valor||0, p=b.pctNota||0; return s + (v - v*p/100); }, 0);
-                const bonusRec = gBonus.reduce((s,b) => s + (b.recebido||0), 0);
-                const total = (l.comissaoGerente || 0) + bonusPrev;
-                const recComissao = (l.recebimentos || []).filter(r => r.tipo === 'Gerente').reduce((s,r) => s + (r.valor||0), 0);
-                const recebido = recComissao + bonusRec;
-                const falta = Math.max(0, total - recebido);
-                const integral = (l.stageId === 'recebido-integral') || (total > 0 && falta === 0);
-                return { total, recebido, falta, integral };
+            // ===== Popular o filtro de mês (união de meses gerados + recebidos) =====
+            const mesesOrd = {}; // rótulo -> ord (menor timestamp)
+            const _regMes = (rotulo, data) => {
+                const dt = _parseDataQualquer(data);
+                const t = dt ? dt.getTime() : Infinity;
+                if(mesesOrd[rotulo] === undefined || t < mesesOrd[rotulo]) mesesOrd[rotulo] = t;
             };
+            base.forEach(l => {
+                _regMes(_fatMesGerado(l), l.saleDate || l.dataGanho || l.date);
+                (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => _regMes(r.data ? labelMesComercial(r.data) : 'Sem data', r.data));
+                (l.bonuses || []).filter(b => b.beneficiario === 'Gerente' && (b.recebido||0) > 0).forEach(b => _regMes(b.data ? labelMesComercial(b.data) : 'Sem data', b.data));
+            });
+            const mesesLista = Object.keys(mesesOrd).sort((a,b) => mesesOrd[a] - mesesOrd[b]);
+            const selEl = document.getElementById('fat-mes-filtro');
+            if(selEl) {
+                const atual = selEl.value;
+                selEl.innerHTML = '<option value="">Todo o período</option>' + mesesLista.map(m => `<option value="${m}">${m}</option>`).join('');
+                if(mesesLista.includes(atual) || atual === '') selEl.value = atual;
+            }
+
+            // ===== Resumo Mensal (Gerado x Recebido x Saldo) =====
+            const geradoMes = {}, recebidoMes = {};
+            base.forEach(l => {
+                const d = _fatDadosLead(l);
+                if(d.total > 0) geradoMes[_fatMesGerado(l)] = (geradoMes[_fatMesGerado(l)] || 0) + (l.comissaoGerente || 0) + ((l.bonuses||[]).filter(b=>b.beneficiario==='Gerente').reduce((s,b)=>{const v=b.valor||0,p=b.pctNota||0;return s+(v-v*p/100);},0));
+                (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => { const k = r.data ? labelMesComercial(r.data) : 'Sem data'; recebidoMes[k] = (recebidoMes[k]||0) + (r.valor||0); });
+                (l.bonuses || []).filter(b => b.beneficiario === 'Gerente' && (b.recebido||0) > 0).forEach(b => { const k = b.data ? labelMesComercial(b.data) : 'Sem data'; recebidoMes[k] = (recebidoMes[k]||0) + (b.recebido||0); });
+            });
+            const mtbody = document.getElementById('fat-mensal-tbody');
+            if(mtbody) {
+                let tg=0, tr=0;
+                const linhasM = mesesLista.map(m => {
+                    const g = geradoMes[m] || 0, r = recebidoMes[m] || 0, saldo = g - r;
+                    tg += g; tr += r;
+                    const sel = (m === mesFiltro);
+                    return `<tr class="border-b border-slate-800/60 ${sel ? 'bg-blue-500/10' : 'hover:bg-slate-800/30'}">
+                        <td class="py-2.5 px-4 text-sm font-bold text-white capitalize">${sel ? '<i class="fa-solid fa-caret-right text-blue-400 mr-1"></i>' : ''}${m}</td>
+                        <td class="py-2.5 px-4 text-right text-sm font-bold text-purple-300">${formatCurrency(g)}</td>
+                        <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(r)}</td>
+                        <td class="py-2.5 px-4 text-right text-sm font-bold ${saldo > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatCurrency(saldo)}</td>
+                    </tr>`;
+                }).join('');
+                const totalRow = `<tr class="bg-slate-900/60 border-t-2 border-slate-700">
+                    <td class="py-2.5 px-4 text-sm font-bold text-white uppercase tracking-wide">Total</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold text-purple-300">${formatCurrency(tg)}</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(tr)}</td>
+                    <td class="py-2.5 px-4 text-right text-sm font-bold ${(tg-tr)>0?'text-amber-300':'text-slate-500'}">${formatCurrency(tg-tr)}</td>
+                </tr>`;
+                mtbody.innerHTML = mesesLista.length ? (linhasM + totalRow) : '<tr><td colspan="4" class="py-10 text-center text-slate-500 text-sm">Sem dados ainda.</td></tr>';
+            }
+
+            // ===== Tabela de leads (aplica o filtro de mês pela data de GERAÇÃO) =====
+            let leadsTab = base;
+            if(mesFiltro) leadsTab = base.filter(l => _fatMesGerado(l) === mesFiltro);
+            window._fatLeadsExport = leadsTab; // p/ exportação
+
+            let totPrevista = 0, totRecebido = 0, totFalta = 0, qtdIntegral = 0;
             const linhaLead = (l) => {
-                const { total, recebido, falta, integral } = dadosLead(l);
+                const { total, recebido, falta, integral } = _fatDadosLead(l);
                 let statusBadge;
                 if(integral) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30"><i class="fa-solid fa-flag-checkered text-[9px]"></i>Faturado Total</span>';
                 else if(recebido > 0) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">Parcial</span>';
@@ -2675,16 +2735,14 @@ window.toggleSidebar = function() {
                 </tr>`;
             };
 
-            // Agrupa por ETAPA do Ganho, na ordem do pipeline
             let html = '';
             PIPELINES.financeiro.forEach(stage => {
-                const doStage = leads.filter(l => l.stageId === stage.id);
+                const doStage = leadsTab.filter(l => l.stageId === stage.id);
                 if(doStage.length === 0) return;
                 let sTotal = 0, sRec = 0, sFalta = 0;
-                doStage.forEach(l => { const d = dadosLead(l); sTotal += d.total; sRec += d.recebido; sFalta += d.falta; if(d.integral) qtdIntegral++; });
+                doStage.forEach(l => { const d = _fatDadosLead(l); sTotal += d.total; sRec += d.recebido; sFalta += d.falta; if(d.integral) qtdIntegral++; });
                 totPrevista += sTotal; totRecebido += sRec; totFalta += sFalta;
                 const cor = stage.color.replace('border-l-','bg-');
-                // Cabeçalho da etapa (com subtotais)
                 html += `<tr class="bg-slate-900/50">
                     <td class="py-2.5 px-4">
                         <span class="inline-flex items-center gap-2 text-xs font-bold text-slate-200 uppercase tracking-wider"><span class="w-2.5 h-2.5 rounded-full ${cor}"></span>${stage.title}<span class="text-slate-500 font-semibold normal-case tracking-normal">· ${doStage.length}</span></span>
@@ -2696,96 +2754,41 @@ window.toggleSidebar = function() {
                 </tr>`;
                 html += doStage.map(linhaLead).join('');
             });
-
-            tbody.innerHTML = html || '<tr><td colspan="5" class="py-16 text-center text-slate-500"><i class="fa-regular fa-folder-open text-3xl mb-3 block opacity-50"></i>Nenhuma venda no Ganho ainda.</td></tr>';
+            tbody.innerHTML = html || '<tr><td colspan="5" class="py-16 text-center text-slate-500"><i class="fa-regular fa-folder-open text-3xl mb-3 block opacity-50"></i>Nenhuma venda no período selecionado.</td></tr>';
 
             const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent = v; };
             set('fat-prevista', formatCurrency(totPrevista));
             set('fat-recebido', formatCurrency(totRecebido));
             set('fat-falta', formatCurrency(totFalta));
-            set('fat-qtd', leads.length);
-            set('fat-recebido-pct', (totPrevista > 0 ? Math.round(totRecebido/totPrevista*100) : 0) + '%');
+            set('fat-qtd', leadsTab.length);
+            set('fat-recebido-pct', (totPrevista > 0 ? Math.min(100, Math.round(totRecebido/totPrevista*100)) : 0) + '%');
             set('fat-integral-qtd', qtdIntegral);
+        }
 
-            // ===== Recebimentos por Mês (comissão do gerente, pela data de cada recebimento) =====
-            const meses = {}; // chave = rótulo do mês -> { total, itens:[{data, dataOrd, valor, cliente}] }
-            const _addReceb = (data, valor, cliente, ehBonus) => {
-                const dt = _parseDataQualquer(data);
-                const rotulo = data ? labelMesComercial(data) : 'Sem data';
-                if(!meses[rotulo]) meses[rotulo] = { total: 0, ord: dt ? dt.getTime() : Infinity, itens: [] };
-                meses[rotulo].total += (valor || 0);
-                if(dt && dt.getTime() < meses[rotulo].ord) meses[rotulo].ord = dt.getTime();
-                meses[rotulo].itens.push({ dataOrd: dt ? dt.getTime() : 0, data: data ? String(data).split('-').reverse().join('/').replace(/^(\d{2}\/\d{2}\/\d{4}).*/, '$1') : '—', valor: valor || 0, cliente, ehBonus: !!ehBonus });
-            };
+        // Exporta o Faturamento (leads visíveis no filtro atual) para CSV
+        window.exportFaturamentoCSV = function() {
+            const leads = window._fatLeadsExport || [];
+            if(!leads.length) { showToast('Nada para exportar no período selecionado.', 'warning'); return; }
+            const mesFiltro = document.getElementById('fat-mes-filtro')?.value || 'Todo o periodo';
+            const stageTitle = (id) => (PIPELINES.financeiro.find(s => s.id === id)?.title || '');
+            const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g,'""') + '"';
+            const linhas = [['ID','Cliente','Corretor','Etapa','Comissao Gerente','Recebido','Falta','Mes Gerado']];
             leads.forEach(l => {
-                // Recebimentos de comissão (gerente)
-                (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => _addReceb(r.data, r.valor, l.name, false));
-                // Bônus do gerente já recebidos
-                (l.bonuses || []).filter(b => b.beneficiario === 'Gerente' && (b.recebido||0) > 0).forEach(b => _addReceb(b.data, b.recebido, l.name, true));
+                const d = _fatDadosLead(l);
+                linhas.push([
+                    l.numId ? formatNumId(l.numId) : '', l.name || '', l.broker || '', stageTitle(l.stageId),
+                    (d.total||0).toFixed(2).replace('.',','), (d.recebido||0).toFixed(2).replace('.',','),
+                    (d.falta||0).toFixed(2).replace('.',','), _fatMesGerado(l)
+                ]);
             });
-            const mesesCont = document.getElementById('fat-meses');
-            if(mesesCont) {
-                const ordenados = Object.entries(meses).sort((a,b) => a[1].ord - b[1].ord);
-                if(ordenados.length === 0) {
-                    mesesCont.innerHTML = '<div class="glass p-5 rounded-2xl border border-slate-700/50 text-sm text-slate-500 md:col-span-3 text-center"><i class="fa-regular fa-calendar text-2xl block mb-2 opacity-50"></i>Nenhum recebimento de gerente registrado ainda.</div>';
-                } else {
-                    mesesCont.innerHTML = ordenados.map(([rotulo, m]) => {
-                        const itens = m.itens.sort((a,b) => a.dataOrd - b.dataOrd).map(it => `
-                            <div class="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60 last:border-0">
-                                <span class="text-slate-400 whitespace-nowrap"><i class="fa-solid fa-calendar-day text-[9px] text-slate-600 mr-1.5"></i>${it.data}</span>
-                                <span class="text-slate-300 truncate max-w-[110px] mx-2 flex items-center gap-1">${it.ehBonus ? '<i class="fa-solid fa-gift text-amber-400 text-[9px]" title="Bônus"></i>' : ''}${it.cliente}</span>
-                                <span class="${it.ehBonus ? 'text-amber-400' : 'text-emerald-400'} font-bold whitespace-nowrap">${formatCurrency(it.valor)}</span>
-                            </div>`).join('');
-                        return `<div class="glass p-4 rounded-2xl border border-slate-700/50">
-                            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/50">
-                                <span class="text-sm font-bold text-white capitalize">${rotulo}</span>
-                                <span class="text-emerald-400 font-bold text-sm">${formatCurrency(m.total)}</span>
-                            </div>
-                            <div class="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-1">${m.itens.length} recebimento${m.itens.length>1?'s':''}</div>
-                            <div>${itens}</div>
-                        </div>`;
-                    }).join('');
-                }
-            }
-
-            // ===== Comissões GERADAS por Mês (comissão do gerente, pela data do Ganho/venda) =====
-            const gerados = {}; // rótulo do mês -> { total, ord, itens:[{data, dataOrd, valor, cliente}] }
-            leads.forEach(l => {
-                const total = l.comissaoGerente || 0;
-                if(total <= 0) return;
-                const dref = l.saleDate || l.dataGanho || l.date || '';
-                const dt = _parseDataQualquer(dref);
-                const rotulo = dref ? labelMesComercial(dref) : 'Sem data';
-                if(!gerados[rotulo]) gerados[rotulo] = { total: 0, ord: dt ? dt.getTime() : Infinity, itens: [] };
-                gerados[rotulo].total += total;
-                if(dt && dt.getTime() < gerados[rotulo].ord) gerados[rotulo].ord = dt.getTime();
-                const dataFmt = dref ? String(dref).split('-').reverse().join('/').replace(/^(\d{2}\/\d{2}\/\d{4}).*/, '$1') : '—';
-                gerados[rotulo].itens.push({ dataOrd: dt ? dt.getTime() : 0, data: dataFmt, valor: total, cliente: l.name });
-            });
-            const gerCont = document.getElementById('fat-geradas');
-            if(gerCont) {
-                const ord = Object.entries(gerados).sort((a,b) => a[1].ord - b[1].ord);
-                if(ord.length === 0) {
-                    gerCont.innerHTML = '<div class="glass p-5 rounded-2xl border border-slate-700/50 text-sm text-slate-500 md:col-span-3 text-center"><i class="fa-regular fa-calendar text-2xl block mb-2 opacity-50"></i>Nenhuma comissão de gerente gerada ainda.</div>';
-                } else {
-                    gerCont.innerHTML = ord.map(([rotulo, m]) => {
-                        const itens = m.itens.sort((a,b) => a.dataOrd - b.dataOrd).map(it => `
-                            <div class="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60 last:border-0">
-                                <span class="text-slate-400 whitespace-nowrap"><i class="fa-solid fa-calendar-day text-[9px] text-slate-600 mr-1.5"></i>${it.data}</span>
-                                <span class="text-slate-300 truncate max-w-[120px] mx-2">${it.cliente}</span>
-                                <span class="text-purple-300 font-bold whitespace-nowrap">${formatCurrency(it.valor)}</span>
-                            </div>`).join('');
-                        return `<div class="glass p-4 rounded-2xl border border-slate-700/50">
-                            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/50">
-                                <span class="text-sm font-bold text-white capitalize">${rotulo}</span>
-                                <span class="text-purple-300 font-bold text-sm">${formatCurrency(m.total)}</span>
-                            </div>
-                            <div class="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-1">${m.itens.length} venda${m.itens.length>1?'s':''}</div>
-                            <div>${itens}</div>
-                        </div>`;
-                    }).join('');
-                }
-            }
+            const csv = '﻿' + linhas.map(l => l.map(esc).join(';')).join('\r\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `faturamento_${String(mesFiltro).replace(/[\/ ]/g,'-')}.csv`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Faturamento exportado em CSV!', 'success');
         }
 
         function renderControleComissao(lead) {
