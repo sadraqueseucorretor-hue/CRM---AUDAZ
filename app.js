@@ -1287,6 +1287,13 @@
             if(canManageUsers()) navUsersBtn.classList.remove('hidden');
             else navUsersBtn.classList.add('hidden');
 
+            // Faturamento: somente Diretor
+            const navFatBtn = document.getElementById('nav-faturamento-btn');
+            if(navFatBtn) {
+                if(currentUser.role === 'Diretor') navFatBtn.classList.remove('hidden');
+                else navFatBtn.classList.add('hidden');
+            }
+
             // Mostrar backup e logo só para diretor
             const backupPanel = document.getElementById('prof-backup-panel');
             const logoPanel = document.getElementById('prof-logo-panel');
@@ -1389,6 +1396,7 @@
                 } else if(view === 'agenda') {
                     document.getElementById('view-agenda').classList.remove('hidden');
                 } else if(view === 'faturamento') {
+                    if(currentUser.role !== 'Diretor') { showToast('Acesso restrito ao Diretor.', 'error'); navigate('dashboard'); return; }
                     document.getElementById('view-faturamento').classList.remove('hidden');
                     renderFaturamento();
                 } else if(['equipe','relatorios'].includes(view)) {
