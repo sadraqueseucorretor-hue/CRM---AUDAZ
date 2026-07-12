@@ -2612,13 +2612,16 @@ window.toggleSidebar = function() {
             let leads = getVisibleLeads().filter(l => l.pipeline === 'financeiro');
 
             // Faturamento só considera de "Venda Gerada" pra frente — etapas anteriores
-            // (ex.: "Venda Informada") NÃO entram no faturamento.
+            // (ex.: "Venda Informada") NÃO entram. Acha pelo NOME da etapa (mais confiável
+            // que o id, pois etapas renomeadas mantêm o id antigo).
+            const _norm = (s) => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
             const fin = PIPELINES.financeiro;
-            let refIdx = fin.findIndex(s => s.id === 'venda-gerada');
-            if(refIdx === -1) refIdx = fin.findIndex(s => /gerada/i.test(s.title || ''));
+            let refIdx = fin.findIndex(s => _norm(s.title) === 'venda gerada');
+            if(refIdx === -1) refIdx = fin.findIndex(s => _norm(s.title).includes('gerada'));
+            if(refIdx === -1) refIdx = fin.findIndex(s => s.id === 'venda-gerada');
             if(refIdx < 0) refIdx = 0;
             const stageIdx = {}; fin.forEach((s,i) => stageIdx[s.id] = i);
-            leads = leads.filter(l => { const i = stageIdx[l.stageId]; return i === undefined || i >= refIdx; });
+            leads = leads.filter(l => { const i = stageIdx[l.stageId]; return i !== undefined && i >= refIdx; });
 
             if(busca) leads = leads.filter(l =>
                 (l.name||'').toLowerCase().includes(busca) || (l.broker||'').toLowerCase().includes(busca)
