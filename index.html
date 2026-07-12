@@ -912,26 +912,34 @@ function doGet(e) {
 
                         <!-- Comissões Geradas por Mês -->
                         <div class="mb-8">
-                            <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3 flex items-center gap-2"><i class="fa-solid fa-calendar-plus text-purple-400"></i> Comissões Geradas por Mês <span class="text-[11px] text-slate-500 font-normal normal-case tracking-normal">(comissão do gerente, pela data do Ganho/venda)</span></h3>
+                            <button onclick="toggleFatSection('fat-geradas', this)" class="w-full text-left text-sm font-bold text-white uppercase tracking-wide mb-3 flex items-center gap-2 hover:text-purple-300 transition-colors">
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform"></i>
+                                <i class="fa-solid fa-calendar-plus text-purple-400"></i> Comissões Geradas por Mês <span class="text-[11px] text-slate-500 font-normal normal-case tracking-normal">(comissão do gerente, pela data do Ganho/venda)</span>
+                            </button>
                             <div id="fat-geradas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                         </div>
 
                         <!-- Recebimentos por Mês -->
                         <div class="mb-8">
-                            <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3 flex items-center gap-2"><i class="fa-solid fa-calendar-check text-emerald-400"></i> Recebimentos por Mês <span class="text-[11px] text-slate-500 font-normal normal-case tracking-normal">(comissão do gerente, por data de recebimento)</span></h3>
+                            <button onclick="toggleFatSection('fat-meses', this)" class="w-full text-left text-sm font-bold text-white uppercase tracking-wide mb-3 flex items-center gap-2 hover:text-emerald-300 transition-colors">
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform"></i>
+                                <i class="fa-solid fa-calendar-check text-emerald-400"></i> Recebimentos por Mês <span class="text-[11px] text-slate-500 font-normal normal-case tracking-normal">(comissão do gerente, por data de recebimento)</span>
+                            </button>
                             <div id="fat-meses" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                         </div>
 
                         <!-- Tabela -->
                         <div class="glass rounded-2xl border border-slate-700/50 overflow-hidden">
                             <div class="px-5 py-3 border-b border-slate-700/50 flex items-center justify-between bg-slate-900/40">
-                                <h3 class="text-sm font-bold text-white uppercase tracking-wide">Vendas no Ganho</h3>
+                                <button onclick="toggleFatSection('fat-tabela-wrap', this)" class="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2 hover:text-blue-300 transition-colors">
+                                    <i class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform"></i> Vendas no Ganho
+                                </button>
                                 <div class="relative">
                                     <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-500 text-xs"></i>
                                     <input id="fat-search" oninput="renderFaturamento()" type="text" placeholder="Buscar cliente/corretor..." class="bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-sm w-52">
                                 </div>
                             </div>
-                            <div class="overflow-x-auto">
+                            <div id="fat-tabela-wrap" class="overflow-x-auto">
                                 <table class="w-full min-w-[720px]">
                                     <thead>
                                         <tr class="border-b border-slate-700/50 bg-slate-900/20">

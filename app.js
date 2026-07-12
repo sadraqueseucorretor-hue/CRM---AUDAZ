@@ -2611,6 +2611,15 @@ window.toggleSidebar = function() {
         // ====================================================================
         // FATURAMENTO — comissões do GERENTE (recebido x falta) nos leads do Ganho
         // ====================================================================
+        // Recolhe/expande uma seção do Faturamento (gira a seta)
+        window.toggleFatSection = function(alvoId, btn) {
+            const alvo = document.getElementById(alvoId);
+            if(!alvo) return;
+            const escondido = alvo.classList.toggle('hidden');
+            const chevron = btn && btn.querySelector('.fa-chevron-down');
+            if(chevron) chevron.style.transform = escondido ? 'rotate(-90deg)' : 'rotate(0deg)';
+        }
+
         window.renderFaturamento = function() {
             const tbody = document.getElementById('fat-tbody');
             if(!tbody) return;
