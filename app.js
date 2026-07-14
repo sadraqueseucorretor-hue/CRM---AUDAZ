@@ -2708,22 +2708,20 @@ window.toggleSidebar = function() {
             if(ctbody) {
                 let tg=0, tr=0;
                 const linhas = mesesLista.map(m => {
-                    const g = geradoMes[m] || 0, r = recebidoMes[m] || 0, saldo = g - r;
+                    const g = geradoMes[m] || 0, r = recebidoMes[m] || 0;
                     tg += g; tr += r;
                     const sel = (m === mesFiltro);
                     return `<tr class="border-b border-slate-800/60 ${sel ? 'bg-blue-500/10' : 'hover:bg-slate-800/30'}">
                         <td class="py-2.5 px-4 text-sm font-bold text-white capitalize">${sel ? '<i class="fa-solid fa-caret-right text-blue-400 mr-1"></i>' : ''}${m}</td>
                         <td class="py-2.5 px-4 text-right text-sm font-bold text-purple-300">${formatCurrency(g)}</td>
                         <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(r)}</td>
-                        <td class="py-2.5 px-4 text-right text-sm font-bold ${saldo > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatCurrency(saldo)}</td>
                     </tr>`;
                 }).join('');
                 ctbody.innerHTML = mesesLista.length ? (linhas + `<tr class="bg-slate-900/60 border-t-2 border-slate-700">
                     <td class="py-2.5 px-4 text-sm font-bold text-white uppercase tracking-wide">Total</td>
                     <td class="py-2.5 px-4 text-right text-sm font-bold text-purple-300">${formatCurrency(tg)}</td>
                     <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(tr)}</td>
-                    <td class="py-2.5 px-4 text-right text-sm font-bold ${(tg-tr)>0?'text-amber-300':'text-slate-500'}">${formatCurrency(tg-tr)}</td>
-                </tr>`) : '<tr><td colspan="4" class="py-10 text-center text-slate-500 text-sm">Sem dados ainda.</td></tr>';
+                </tr>`) : '<tr><td colspan="3" class="py-10 text-center text-slate-500 text-sm">Sem dados ainda.</td></tr>';
             }
             const mtbody = document.getElementById('fat-mensal-tbody');
             if(mtbody) {
