@@ -314,7 +314,7 @@
                             <h2 class="text-lg font-bold text-white tracking-tight flex-shrink-0" id="kanban-title">Pipeline</h2>
                             <div class="flex flex-wrap gap-2">
                                 <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-                                    <input type="text" id="kanban-search" placeholder="Filtrar..." class="px-3 py-1.5 text-sm bg-transparent border-0 w-40" oninput="renderKanban(currentPipeline)">
+                                    <input type="text" id="kanban-search" placeholder="Filtrar..." class="px-3 py-1.5 text-sm bg-transparent border-0 w-40" oninput="buscarKanbanDebounced()">
                                 </div>
                                 <select id="kanban-filter-team" onchange="renderKanban(currentPipeline)" class="bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-sm text-white cursor-pointer">
                                     <option value="">Todas Equipes</option>

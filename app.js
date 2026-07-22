@@ -2289,13 +2289,19 @@ window.toggleSidebar = function() {
         }
 
         function debounce(func, wait) {
-            let timeout; 
-            return function executedFunction(...args) { 
-                const later = () => { clearTimeout(timeout); func(...args); }; 
-                clearTimeout(timeout); 
-                timeout = setTimeout(later, wait); 
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => { clearTimeout(timeout); func(...args); };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
             };
         }
+
+        // PERF: busca do kanban só re-renderiza depois que o usuário para de digitar
+        // (evita redesenhar o quadro inteiro a cada tecla).
+        window.buscarKanbanDebounced = debounce(function() {
+            renderKanban(currentPipeline);
+        }, 250);
 
         window.openNewLeadModal = function() {
             const select = document.getElementById('nl-broker');

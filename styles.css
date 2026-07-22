@@ -43,8 +43,14 @@ body { font-family: 'Inter', sans-serif; background-color: #050b14; color: #f8fa
         }
 
         /* Glassmorphism & Scrollbar */
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .glass-login { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        /* PERF: sem backdrop-filter (blur pesava demais na GPU do celular ao abrir/fechar
+           modais). Fundo sólido translúcido dá visual quase idêntico, sem travamento. */
+        .glass { background: rgba(30, 41, 59, 0.92); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass-login { background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+
+        /* PERF: neutraliza o desfoque de fundo dos modais (Tailwind backdrop-blur-*).
+           Sobre um fundo já 90-95% opaco o blur é quase invisível, mas custa muito no celular. */
+        [class*="backdrop-blur"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
         
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.8); }
