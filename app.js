@@ -405,7 +405,7 @@
                         action: 'sync',
                         id: leadSheetId(lead),
                         data: lead.date || lead.dataAnalise || agora.toLocaleDateString('pt-BR'),
-                        mes: labelMesComercial(lead.saleDate || lead.dataGanho || lead.date) || lead.mesAnalise || labelMesComercial(agora),
+                        mes: mesRefDeDataBR(lead.date) || lead.mesAnalise || labelMesComercial(agora),
                         corretor: lead.broker || '',
                         equipe: broker?.team || '',
                         cliente: lead.name || '',
@@ -2766,7 +2766,7 @@ window.toggleSidebar = function() {
                 else if(integral) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30"><i class="fa-solid fa-flag-checkered text-[9px]"></i>Faturado Total</span>';
                 else if(recebido > 0) statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">Parcial</span>';
                 else statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-600/30 text-slate-400 border border-slate-600/40">Pendente</span>';
-                const mesRef = labelMesComercial(l.saleDate || l.dataGanho || l.date) || '—';
+                const mesRef = mesRefDeDataBR(l.date) || '—';
                 const dim = ehDistrato ? 'opacity-60' : '';
                 return `<tr class="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors cursor-pointer ${dim}" onclick="openLeadDetails('${l.id}')">
                     <td class="py-2.5 px-4 pl-8">
@@ -2817,7 +2817,7 @@ window.toggleSidebar = function() {
                 const recRows = [];
                 const _dBR = (d) => d ? String(d).split('-').reverse().join('/').replace(/^(\d{2}\/\d{2}\/\d{4}).*/, '$1') : '—';
                 baseCalc.forEach(l => {
-                    const mesRef = labelMesComercial(l.saleDate || l.dataGanho || l.date) || '—';
+                    const mesRef = mesRefDeDataBR(l.date) || '—';
                     (l.recebimentos || []).filter(r => r.tipo === 'Gerente').forEach(r => {
                         const dt = _parseDataQualquer(r.data);
                         recRows.push({ ord: dt ? dt.getTime() : 0, mesReceb: r.data ? labelMesComercial(r.data) : 'Sem data', dataBR: _dBR(r.data), cliente: l.name, mesRef, tipo: 'Comissão', valor: r.valor || 0 });
@@ -3216,7 +3216,7 @@ window.toggleSidebar = function() {
                 if(lead.pipeline === 'financeiro') {
                     saleSection.classList.remove('hidden');
                     const mrEl = document.getElementById('ld-mes-referencia');
-                    if(mrEl) mrEl.textContent = labelMesComercial(lead.saleDate || lead.dataGanho || lead.date) || '—';
+                    if(mrEl) mrEl.textContent = mesRefDeDataBR(lead.date) || '—';
                     const info = document.getElementById('ld-sale-info');
                     if(info) {
                         const parts = [];
