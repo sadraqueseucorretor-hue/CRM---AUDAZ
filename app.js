@@ -1074,16 +1074,36 @@
             showLogin();
         }
 
-        // Cria/atualiza a senha OFICIAL (Supabase Auth) de um usuário, via robô do Google
-        function sincronizarSenhaOficial(email, senha) {
-            if(!email || !senha || !SHEETS_URL) return;
-            try {
-                fetch(SHEETS_URL, {
-                    method: 'POST', mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'definirSenhaUsuario', email: email, senha: senha })
+        // Cliente Supabase ISOLADO só para criar contas de login — não persiste sessão,
+        // então NÃO mexe na sessão do Diretor que está usando o sistema.
+        let _sbAuthOnly = null;
+        function _authOnlyClient() {
+            if(!_sbAuthOnly) {
+                _sbAuthOnly = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
                 });
-            } catch(_) {}
+            }
+            return _sbAuthOnly;
+        }
+
+        // Cria automaticamente a conta de LOGIN (Supabase Auth) de um usuário novo.
+        // Usa signUp num cliente isolado — sem depender do robô nem da chave secreta.
+        async function provisionarLogin(email, senha) {
+            if(!email || !senha) return { ok: false };
+            email = String(email).trim().toLowerCase();
+            try {
+                const { data, error } = await _authOnlyClient().auth.signUp({ email, password: senha });
+                if(error) {
+                    // conta já existe (usuário antigo) — tudo bem, o login dele já funciona
+                    if(/already|registered|exists|registrado/i.test(error.message || '')) return { ok: true, existed: true };
+                    console.warn('provisionarLogin:', error.message);
+                    return { ok: false, message: error.message };
+                }
+                return { ok: true, needsConfirm: !data.session };
+            } catch(err) {
+                console.warn('provisionarLogin erro:', err);
+                return { ok: false, message: err.message };
+            }
         }
 
         // ====================================================================
@@ -4280,7 +4300,7 @@ window.toggleSidebar = function() {
                 target.status = status;
                 target.goal = goal;
                 target.commission = commission;
-                if(pass) { target.pass = pass; sincronizarSenhaOficial(target.email, pass); }
+                if(pass) { target.pass = pass; provisionarLogin(target.email, pass); }
                 if(photo !== undefined) target.photo = photo;
 
                 // Se renomeou, atualizar broker nos leads
@@ -4316,7 +4336,10 @@ window.toggleSidebar = function() {
                 };
                 DB.users.push(newUser);
                 saveUsersDB();
-                if(pass) sincronizarSenhaOficial(email, pass); // cria o acesso oficial (login) do novo usuário
+                if(pass) provisionarLogin(email, pass).then(res => { // cria automaticamente a conta de login
+                    if(res && res.needsConfirm) showToast(`${name} vai receber um e-mail para confirmar o acesso.`, 'info');
+                    else if(res && !res.ok) showToast('Aviso: não consegui criar o login automático. ' + (res.message || ''), 'warning');
+                });
                 triggerAutoSaveUI();
                 closeModal('modal-user');
                 renderUsersTable();
