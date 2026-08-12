@@ -1114,6 +1114,24 @@
             }
         }
 
+        // Diretor: envia o e-mail de redefinição de senha para o e-mail cadastrado do usuário
+        window.enviarResetPorDiretor = async function(email, nome) {
+            if(currentUser.role !== 'Diretor') { showToast('Apenas o Diretor pode enviar redefinição.', 'error'); return; }
+            email = String(email || '').trim().toLowerCase();
+            if(!email) { showToast('Este usuário não tem e-mail cadastrado.', 'error'); return; }
+            if(!confirm(`Enviar e-mail de redefinição de senha para ${nome}?\n\n${email}`)) return;
+            try {
+                const redirect = window.location.origin + window.location.pathname;
+                const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: redirect });
+                if(error) throw error;
+                showToast(`Link de redefinição enviado para ${email}. Peça para conferir a caixa de entrada e o spam.`, 'success');
+                addNotification(`Redefinição de senha enviada para ${nome} (${email})`, 'info');
+            } catch(err) {
+                // Mostra o motivo real (rate limit, SMTP, etc.) pra facilitar o diagnóstico
+                showToast('Falha ao enviar: ' + (err.message || err.error_description || 'erro desconhecido'), 'error');
+            }
+        }
+
         // Salva a nova senha (após o usuário clicar no link do e-mail)
         window.salvarNovaSenha = async function() {
             const nova = document.getElementById('nova-senha-input').value;
@@ -4061,6 +4079,7 @@ window.toggleSidebar = function() {
                     <td class="px-4 py-3">
                         <div class="flex items-center justify-end gap-1">
                             ${editable ? `<button onclick="openUserModal('${u.id}')" title="Editar usuário" class="px-3 py-2 rounded-lg hover:bg-blue-500/20 text-blue-300 transition-colors flex items-center gap-1 text-xs font-bold"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+                            ${currentUser.role === 'Diretor' && u.email ? `<button onclick="enviarResetPorDiretor('${u.email}','${(u.name||'').replace(/'/g,"\\'")}')" title="Enviar e-mail de redefinição de senha" class="px-3 py-2 rounded-lg hover:bg-purple-500/20 text-purple-300 transition-colors"><i class="fa-solid fa-key"></i></button>` : ''}
                             ${editable && !isMe ? `<button onclick="toggleUserStatus('${u.id}')" title="${u.status === 'Ativo' ? 'Desativar' : 'Ativar'}" class="px-3 py-2 rounded-lg hover:bg-amber-500/20 text-amber-300 transition-colors"><i class="fa-solid ${u.status === 'Ativo' ? 'fa-toggle-on' : 'fa-toggle-off'}"></i></button>` : ''}
                             ${deletable ? `<button onclick="deleteUser('${u.id}')" title="Excluir" class="px-3 py-2 rounded-lg hover:bg-red-500/20 text-red-300 transition-colors"><i class="fa-solid fa-trash"></i></button>` : ''}
                             ${(!editable && !deletable) ? '<span class="text-xs text-slate-600 px-2">Sem ações</span>' : ''}
