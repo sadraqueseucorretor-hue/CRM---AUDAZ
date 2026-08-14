@@ -985,7 +985,7 @@
                     <div class="flex gap-3">
                         <i class="fa-solid ${icons[n.type] || icons.info} mt-1"></i>
                         <div class="flex-1">
-                            <p class="text-sm text-white">${n.message}</p>
+                            <p class="text-sm text-white">${escapeHtml(n.message)}</p>
                             <p class="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">${day} • ${time}</p>
                         </div>
                     </div>
@@ -1521,9 +1521,9 @@ window.toggleSidebar = function() {
                 <div class="glass border border-amber-500/20 rounded-xl p-5 flex flex-col gap-3 hover:border-amber-400/40 transition-colors">
                     <div class="flex items-start justify-between">
                         <div>
-                            <h3 class="font-bold text-white text-base">${lead.name}</h3>
-                            <p class="text-xs text-slate-400 mt-0.5"><i class="fa-solid fa-phone mr-1"></i>${lead.phone || '—'}</p>
-                            <p class="text-xs text-slate-400"><i class="fa-solid fa-tag mr-1"></i>${lead.origin || '—'}</p>
+                            <h3 class="font-bold text-white text-base">${escapeHtml(lead.name)}</h3>
+                            <p class="text-xs text-slate-400 mt-0.5"><i class="fa-solid fa-phone mr-1"></i>${escapeHtml(lead.phone) || '—'}</p>
+                            <p class="text-xs text-slate-400"><i class="fa-solid fa-tag mr-1"></i>${escapeHtml(lead.origin) || '—'}</p>
                         </div>
                         <span class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">Aguardando</span>
                     </div>
@@ -1760,7 +1760,7 @@ window.toggleSidebar = function() {
                 ).slice(0, 10);
                 
                 if(found.length === 0) {
-                    results.innerHTML = '<div class="p-6 text-center text-slate-500"><i class="fa-solid fa-magnifying-glass mb-2 block text-2xl"></i><p class="text-sm">Nenhum resultado encontrado para "<b>'+q+'</b>"</p></div>';
+                    results.innerHTML = '<div class="p-6 text-center text-slate-500"><i class="fa-solid fa-magnifying-glass mb-2 block text-2xl"></i><p class="text-sm">Nenhum resultado encontrado para "<b>'+escapeHtml(q)+'</b>"</p></div>';
                 } else {
                     results.innerHTML = found.map(l => {
                         const pipelineMap = {leads:'Leads', analise:'Análise', financeiro:'Ganhos', cancelados:'CANCELADO'};
@@ -1771,8 +1771,8 @@ window.toggleSidebar = function() {
                         return `<button onclick="openLeadDetails('${l.id}'); document.getElementById('search-results').classList.add('hidden'); document.getElementById('global-search').value='';" class="w-full text-left p-4 hover:bg-slate-700/40 border-b border-slate-700/50 transition-colors flex items-center gap-4 ${isCanceled ? 'opacity-70' : ''}">
                             <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold text-white ${isCanceled ? 'grayscale' : ''}">${l.name.charAt(0).toUpperCase()}</div>
                             <div class="flex-1 overflow-hidden">
-                                <p class="text-sm font-bold text-white truncate">${l.numId ? '<span class="text-blue-400 mr-1">'+formatNumId(l.numId)+'</span>' : ''}${l.name}${cancelBadge}</p>
-                                <p class="text-xs text-slate-400 truncate">${l.phone || ''} • ${pipelineName} ${stageName ? '/ ' + stageName : ''} ${l.broker ? '• ' + l.broker : ''}</p>
+                                <p class="text-sm font-bold text-white truncate">${l.numId ? '<span class="text-blue-400 mr-1">'+formatNumId(l.numId)+'</span>' : ''}${escapeHtml(l.name)}${cancelBadge}</p>
+                                <p class="text-xs text-slate-400 truncate">${escapeHtml(l.phone) || ''} • ${pipelineName} ${stageName ? '/ ' + escapeHtml(stageName) : ''} ${l.broker ? '• ' + escapeHtml(l.broker) : ''}</p>
                             </div>
                             <i class="fa-solid fa-arrow-right text-slate-500"></i>
                         </button>`;
@@ -1884,9 +1884,9 @@ window.toggleSidebar = function() {
                     const pipelineColor = {leads:'bg-blue-500/20 text-blue-400', analise:'bg-purple-500/20 text-purple-400', financeiro:'bg-emerald-500/20 text-emerald-400'}[l.pipeline];
                     const valor = l.pipeline === 'financeiro' ? (l.vgv || l.propertyValue || 0) : (l.income || 0);
                     return `<tr class="border-b border-slate-800 hover:bg-slate-800/30 transition-colors cursor-pointer" onclick="openLeadDetails('${l.id}')">
-                        <td class="py-3 px-2"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold">${l.name.charAt(0).toUpperCase()}</div><span class="font-medium text-white">${l.name}</span></div></td>
+                        <td class="py-3 px-2"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold">${l.name.charAt(0).toUpperCase()}</div><span class="font-medium text-white">${escapeHtml(l.name)}</span></div></td>
                         <td class="py-3 px-2"><span class="text-[10px] font-bold px-2 py-1 rounded ${pipelineColor} uppercase tracking-wider">${pipelineName}</span></td>
-                        <td class="py-3 px-2 text-slate-300 text-sm">${l.broker || 'Não atribuído'}</td>
+                        <td class="py-3 px-2 text-slate-300 text-sm">${escapeHtml(l.broker) || 'Não atribuído'}</td>
                         <td class="py-3 px-2 text-emerald-400 font-bold text-sm">${formatCurrency(valor)}</td>
                         <td class="py-3 px-2 text-slate-500 text-xs">${l.date}</td>
                     </tr>`;
@@ -2141,9 +2141,9 @@ window.toggleSidebar = function() {
                         <div class="w-8 h-8 rounded-full bg-gradient-to-br ${lead.hot ? 'from-orange-500 to-red-500' : 'from-slate-600 to-slate-700'} flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5">${initial}</div>
                         <div class="flex-1 min-w-0">
                             <h4 class="font-semibold text-[13px] text-white leading-snug">
-                                ${lead.hot ? '<i class="fa-solid fa-fire text-orange-400 hot-flame text-[11px] mr-1"></i>' : ''}${lead.numId ? `<span class="text-blue-400/70 text-[10px] font-bold mr-1">${formatNumId(lead.numId)}</span>` : ''}${lead.name}
+                                ${lead.hot ? '<i class="fa-solid fa-fire text-orange-400 hot-flame text-[11px] mr-1"></i>' : ''}${lead.numId ? `<span class="text-blue-400/70 text-[10px] font-bold mr-1">${formatNumId(lead.numId)}</span>` : ''}${escapeHtml(lead.name)}
                             </h4>
-                            <span class="text-[11px] text-slate-500">${lead.origin || '—'}</span>
+                            <span class="text-[11px] text-slate-500">${escapeHtml(lead.origin) || '—'}</span>
                         </div>
                     </div>
                     <!-- Follow-up badge -->
@@ -2152,7 +2152,7 @@ window.toggleSidebar = function() {
                     <div class="flex items-center justify-between mt-2.5 pt-2.5 border-t border-slate-700/30 pointer-events-none">
                         <span class="flex items-center gap-1.5 text-[11px] text-slate-400 min-w-0">
                             <i class="fa-solid fa-user text-[9px] text-slate-600 flex-shrink-0"></i>
-                            <span class="truncate max-w-[110px]">${lead.broker || 'N/A'}</span>
+                            <span class="truncate max-w-[110px]">${escapeHtml(lead.broker) || 'N/A'}</span>
                         </span>
                         ${lead.pipeline === 'financeiro' && (lead.vgv || lead.propertyValue)
                             ? `<span class="text-[11px] font-bold text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-sack-dollar text-[9px]"></i>${formatCurrency(lead.vgv || lead.propertyValue || 0)}</span>`
@@ -2247,7 +2247,7 @@ window.toggleSidebar = function() {
             if(nameInput && nameInput.value.trim() && nameInput.value !== lead.name) {
                 lead.name = nameInput.value.trim();
                 const nameH = document.getElementById('ld-name');
-                if(nameH) { const fi = followUpInfo(lead.followUp); const fs = fi ? `<span class="text-[11px] px-2.5 py-1 rounded font-bold ml-2 align-middle ${fi.overdue?'bg-red-500 text-white':'bg-blue-600 text-white'}"><i class="fa-solid fa-clock mr-1"></i>${fi.text}</span>` : ''; nameH.innerHTML = `${lead.numId ? '<span class="text-blue-400 text-lg align-middle mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${lead.name}${fs}`; }
+                if(nameH) { const fi = followUpInfo(lead.followUp); const fs = fi ? `<span class="text-[11px] px-2.5 py-1 rounded font-bold ml-2 align-middle ${fi.overdue?'bg-red-500 text-white':'bg-blue-600 text-white'}"><i class="fa-solid fa-clock mr-1"></i>${fi.text}</span>` : ''; nameH.innerHTML = `${lead.numId ? '<span class="text-blue-400 text-lg align-middle mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${escapeHtml(lead.name)}${fs}`; }
                 const av = document.getElementById('ld-avatar');
                 if(av) av.innerText = lead.name.substring(0,2).toUpperCase();
             }
@@ -2808,8 +2808,8 @@ window.toggleSidebar = function() {
                 const dim = ehDistrato ? 'opacity-60' : '';
                 return `<tr class="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors cursor-pointer ${dim}" onclick="openLeadDetails('${l.id}')">
                     <td class="py-2.5 px-4 pl-8">
-                        <div class="font-bold text-white text-sm ${ehDistrato ? 'line-through decoration-red-400/60' : ''}">${l.numId ? '<span class="text-blue-400/70 text-[11px] mr-1">'+formatNumId(l.numId)+'</span>' : ''}${l.name}</div>
-                        <div class="text-[11px] text-slate-500">${l.broker || '—'} <span class="text-slate-600">· ref: ${mesRef}</span></div>
+                        <div class="font-bold text-white text-sm ${ehDistrato ? 'line-through decoration-red-400/60' : ''}">${l.numId ? '<span class="text-blue-400/70 text-[11px] mr-1">'+formatNumId(l.numId)+'</span>' : ''}${escapeHtml(l.name)}</div>
+                        <div class="text-[11px] text-slate-500">${escapeHtml(l.broker) || '—'} <span class="text-slate-600">· ref: ${mesRef}</span></div>
                     </td>
                     <td class="py-2.5 px-4 text-right text-sm font-bold ${ehDistrato ? 'text-slate-500' : 'text-white'}">${formatCurrency(total)}</td>
                     <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(recebido)}</td>
@@ -2882,7 +2882,7 @@ window.toggleSidebar = function() {
                         </tr>`;
                         out += g.itens.map(r => `<tr class="border-b border-slate-800/60 hover:bg-slate-800/30">
                             <td class="py-2.5 px-4 pl-8 text-sm text-white font-semibold">${r.dataBR}</td>
-                            <td class="py-2.5 px-4 text-sm text-slate-300">${r.cliente}</td>
+                            <td class="py-2.5 px-4 text-sm text-slate-300">${escapeHtml(r.cliente)}</td>
                             <td class="py-2.5 px-4 text-sm text-slate-400 capitalize">${r.mesRef}</td>
                             <td class="py-2.5 px-4"><span class="text-[10px] font-bold px-2 py-0.5 rounded ${r.tipo === 'Bônus' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}">${r.tipo}</span></td>
                             <td class="py-2.5 px-4 text-right text-sm font-bold text-emerald-400">${formatCurrency(r.valor)}</td>
@@ -3117,7 +3117,7 @@ window.toggleSidebar = function() {
             const fuSpan = fuInfo
                 ? `<span id="ld-fu-badge" class="text-[11px] px-2.5 py-1 rounded font-bold ml-2 align-middle ${fuInfo.overdue ? 'bg-red-500 text-white' : 'bg-blue-600 text-white'}"><i class="fa-solid fa-clock mr-1"></i>${fuInfo.text}</span><button onclick="openFollowUpPicker(event,'${lead.id}')" class="text-[11px] px-2.5 py-1 rounded font-bold ml-1 align-middle bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white transition-all"><i class="fa-solid fa-clock mr-1"></i>Follow-up</button>`
                 : `<button onclick="openFollowUpPicker(event,'${lead.id}')" class="text-[11px] px-2.5 py-1 rounded font-medium ml-2 align-middle bg-slate-700 hover:bg-blue-600 text-slate-400 hover:text-white transition-all"><i class="fa-solid fa-calendar-plus mr-1"></i>Follow-up</button>`;
-            document.getElementById('ld-name').innerHTML = `${lead.numId ? '<span class="text-blue-400 text-lg align-middle mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${lead.name}${fuSpan}`;
+            document.getElementById('ld-name').innerHTML = `${lead.numId ? '<span class="text-blue-400 text-lg align-middle mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${escapeHtml(lead.name)}${fuSpan}`;
             document.getElementById('ld-avatar').innerText = lead.name.substring(0,2).toUpperCase();
             
             document.getElementById('ld-pipeline-select').value = lead.pipeline; 
@@ -3134,7 +3134,7 @@ window.toggleSidebar = function() {
             const brokerBadge = document.getElementById('ld-broker-badge');
             if(brokerBadge) {
                 if(lead.broker && lead.broker !== 'Não Atribuído') {
-                    brokerBadge.innerHTML = `<i class="fa-solid fa-user-tie mr-1.5"></i>${lead.broker}`;
+                    brokerBadge.innerHTML = `<i class="fa-solid fa-user-tie mr-1.5"></i>${escapeHtml(lead.broker)}`;
                     brokerBadge.className = 'text-xs font-bold rounded px-2.5 py-0.5 border whitespace-nowrap flex-shrink-0 bg-slate-700/40 text-slate-200 border-slate-600';
                 } else {
                     brokerBadge.className = 'hidden';
@@ -3143,7 +3143,7 @@ window.toggleSidebar = function() {
             const construtoraBadge = document.getElementById('ld-construtora-badge');
             if(construtoraBadge) {
                 if(lead.construtora) {
-                    construtoraBadge.innerHTML = `<i class="fa-solid fa-building mr-1.5"></i>${lead.construtora}`;
+                    construtoraBadge.innerHTML = `<i class="fa-solid fa-building mr-1.5"></i>${escapeHtml(lead.construtora)}`;
                     construtoraBadge.className = 'text-xs font-bold rounded px-2.5 py-0.5 border whitespace-nowrap flex-shrink-0 bg-amber-500/15 text-amber-300 border-amber-500/30';
                 } else {
                     construtoraBadge.className = 'hidden';
@@ -3152,7 +3152,7 @@ window.toggleSidebar = function() {
             const empreendimentoBadge = document.getElementById('ld-empreendimento-badge');
             if(empreendimentoBadge) {
                 if(lead.project) {
-                    empreendimentoBadge.innerHTML = `<i class="fa-solid fa-city mr-1.5"></i>${lead.project}`;
+                    empreendimentoBadge.innerHTML = `<i class="fa-solid fa-city mr-1.5"></i>${escapeHtml(lead.project)}`;
                     empreendimentoBadge.className = 'text-xs font-bold rounded px-2.5 py-0.5 border whitespace-nowrap flex-shrink-0 bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
                 } else {
                     empreendimentoBadge.className = 'hidden';
@@ -3259,7 +3259,7 @@ window.toggleSidebar = function() {
                     if(info) {
                         const parts = [];
                         if(lead.saleDate) parts.push(`<i class="fa-solid fa-calendar-check text-emerald-400"></i> Venda registrada em <b class="text-white">${new Date(lead.saleDate).toLocaleDateString('pt-BR')}</b>`);
-                        if(lead.updatedBy) parts.push(`<i class="fa-solid fa-user-pen text-blue-400"></i> Última edição: <b class="text-slate-300">${lead.updatedBy}</b> ${lead.updatedAt ? '· ' + new Date(lead.updatedAt).toLocaleString('pt-BR') : ''}`);
+                        if(lead.updatedBy) parts.push(`<i class="fa-solid fa-user-pen text-blue-400"></i> Última edição: <b class="text-slate-300">${escapeHtml(lead.updatedBy)}</b> ${lead.updatedAt ? '· ' + new Date(lead.updatedAt).toLocaleString('pt-BR') : ''}`);
                         info.innerHTML = parts.length ? parts.join('<br>') : 'Sem histórico de venda registrado ainda.';
                     }
                     renderControleComissao(lead); // resumo + recebimentos de comissão
@@ -3527,8 +3527,8 @@ window.toggleSidebar = function() {
                 <div class="relative pl-10">
                     <div class="absolute left-[21px] top-2 w-2.5 h-2.5 bg-primary rounded-full border-2 border-slate-900 shadow-[0_0_6px_rgba(59,130,246,0.5)] z-10"></div>
                     <div class="bg-slate-800/40 px-3 py-2 rounded-lg border border-slate-700/40 hover:bg-slate-800/70 transition-colors">
-                        <span class="text-[10px] font-bold text-blue-400/80 block mb-0.5 tracking-wide">${time}</span>
-                        <span class="text-xs text-slate-300">${text}</span>
+                        <span class="text-[10px] font-bold text-blue-400/80 block mb-0.5 tracking-wide">${escapeHtml(time)}</span>
+                        <span class="text-xs text-slate-300">${escapeHtml(text)}</span>
                     </div>
                 </div>`);
             });
@@ -3707,6 +3707,15 @@ window.toggleSidebar = function() {
             });
         }
         function _escAttr(s) { return String(s == null ? '' : s).split('"').join('&quot;'); }
+        // Escapa texto de usuário antes de injetar via innerHTML (previne XSS armazenado)
+        function escapeHtml(s) {
+            return String(s == null ? '' : s)
+                .split('&').join('&amp;')
+                .split('<').join('&lt;')
+                .split('>').join('&gt;')
+                .split('"').join('&quot;')
+                .split("'").join('&#39;');
+        }
 
         function renderPipelineEditor(tab) {
             const stages = PIPELINES[tab];
@@ -3835,7 +3844,7 @@ window.toggleSidebar = function() {
                 }
                 cont.innerHTML = items.map((it, i) => `
                     <div class="flex items-center justify-between bg-slate-800/60 border border-slate-700/50 rounded-lg px-3 py-2">
-                        <span class="text-sm text-white">${it}</span>
+                        <span class="text-sm text-white">${escapeHtml(it)}</span>
                         <button onclick="removeItemLista('${tipo}', ${i})" class="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1.5 rounded transition-colors"><i class="fa-solid fa-trash text-xs"></i></button>
                     </div>`).join('');
             };
@@ -4078,15 +4087,15 @@ window.toggleSidebar = function() {
                         <div class="flex items-center gap-3">
                             ${getInitialsAvatar(u.name, u.photo)}
                             <div class="min-w-0">
-                                <div class="font-bold text-white flex items-center gap-2 truncate">${u.name}${isMe ? '<span class="text-[9px] bg-primary/30 text-blue-200 px-1.5 py-0.5 rounded uppercase font-bold">você</span>' : ''}</div>
-                                <div class="text-xs text-slate-400 truncate">${u.email}</div>
-                                ${u.phone ? `<div class="text-[11px] text-slate-500"><i class="fa-solid fa-phone text-[9px]"></i> ${u.phone}</div>` : ''}
+                                <div class="font-bold text-white flex items-center gap-2 truncate">${escapeHtml(u.name)}${isMe ? '<span class="text-[9px] bg-primary/30 text-blue-200 px-1.5 py-0.5 rounded uppercase font-bold">você</span>' : ''}</div>
+                                <div class="text-xs text-slate-400 truncate">${escapeHtml(u.email)}</div>
+                                ${u.phone ? `<div class="text-[11px] text-slate-500"><i class="fa-solid fa-phone text-[9px]"></i> ${escapeHtml(u.phone)}</div>` : ''}
                             </div>
                         </div>
                     </td>
                     <td class="px-4 py-3">${getRoleBadge(u.role)}</td>
                     <td class="px-4 py-3 hidden md:table-cell">
-                        ${u.team ? `<span class="text-sm text-slate-300">${u.team}</span>` : '<span class="text-xs text-slate-600">—</span>'}
+                        ${u.team ? `<span class="text-sm text-slate-300">${escapeHtml(u.team)}</span>` : '<span class="text-xs text-slate-600">—</span>'}
                         ${u.role === 'Corretor' ? `<div class="text-[11px] text-slate-500 mt-0.5"><i class="fa-solid fa-folder-open text-[9px]"></i> ${myLeadsCount} ${myLeadsCount === 1 ? 'lead' : 'leads'}</div>` : ''}
                     </td>
                     <td class="px-4 py-3 hidden lg:table-cell">
@@ -4725,7 +4734,7 @@ window.toggleSidebar = function() {
                     }
                     <div class="flex-1 min-w-0">
                         <div class="flex justify-between items-center mb-1">
-                            <div class="font-bold text-white truncate">${r.name}</div>
+                            <div class="font-bold text-white truncate">${escapeHtml(r.name)}</div>
                             <div class="text-emerald-400 font-bold text-sm flex-shrink-0 ml-3">${formatCurrency(r.vgv)}</div>
                         </div>
                         <div class="h-2 bg-slate-800 rounded-full overflow-hidden mb-1">
@@ -4803,12 +4812,12 @@ window.toggleSidebar = function() {
                             }
                             <div class="flex-1 max-w-[80%] ${isMe ? 'text-right' : ''}">
                                 <div class="flex items-baseline gap-2 mb-1 ${isMe ? 'justify-end' : ''}">
-                                    <span class="text-sm font-bold text-white">${m.author}</span>
-                                    <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">${m.role || '—'}</span>
+                                    <span class="text-sm font-bold text-white">${escapeHtml(m.author)}</span>
+                                    <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">${escapeHtml(m.role) || '—'}</span>
                                     <span class="text-[11px] text-slate-500">${time}</span>
                                 </div>
                                 <div class="inline-block ${isMe ? 'bg-blue-500/20 border-blue-500/30 text-blue-50' : 'bg-slate-800/80 border-slate-700 text-slate-200'} border rounded-xl px-4 py-3 text-sm leading-relaxed shadow text-left">
-                                    ${(m.text || '').replace(/\n/g, '<br>')}
+                                    ${escapeHtml(m.text || '').replace(/\n/g, '<br>')}
                                 </div>
                             </div>
                         </div>`;
@@ -5092,14 +5101,14 @@ window.toggleSidebar = function() {
                         <div class="flex items-center gap-3 cursor-pointer" onclick="openLeadDetails('${l.id}')">
                             <div class="w-10 h-10 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white font-bold text-sm">${l.name.substring(0,2).toUpperCase()}</div>
                             <div>
-                                <div class="font-bold text-white">${l.name}</div>
-                                <div class="text-xs text-slate-500">${l.phone || ''}</div>
+                                <div class="font-bold text-white">${escapeHtml(l.name)}</div>
+                                <div class="text-xs text-slate-500">${escapeHtml(l.phone) || ''}</div>
                             </div>
                         </div>
                     </td>
-                    <td class="px-4 py-3 hidden md:table-cell"><span class="text-sm text-slate-300">${l.broker || '—'}</span></td>
-                    <td class="px-4 py-3"><span class="inline-block px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-500/20 text-red-300 border border-red-500/30">${l.cancelReason || 'Sem motivo'}</span>${l.cancelObs ? `<div class="text-[11px] text-slate-500 mt-1 italic">"${l.cancelObs.length > 60 ? l.cancelObs.substring(0,60)+'...' : l.cancelObs}"</div>` : ''}</td>
-                    <td class="px-4 py-3 hidden lg:table-cell"><span class="text-xs text-slate-400">${canceledDate}</span><br><span class="text-[10px] text-slate-600">por ${l.canceledBy || '—'}</span></td>
+                    <td class="px-4 py-3 hidden md:table-cell"><span class="text-sm text-slate-300">${escapeHtml(l.broker) || '—'}</span></td>
+                    <td class="px-4 py-3"><span class="inline-block px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-500/20 text-red-300 border border-red-500/30">${escapeHtml(l.cancelReason) || 'Sem motivo'}</span>${l.cancelObs ? `<div class="text-[11px] text-slate-500 mt-1 italic">"${escapeHtml(l.cancelObs.length > 60 ? l.cancelObs.substring(0,60)+'...' : l.cancelObs)}"</div>` : ''}</td>
+                    <td class="px-4 py-3 hidden lg:table-cell"><span class="text-xs text-slate-400">${canceledDate}</span><br><span class="text-[10px] text-slate-600">por ${escapeHtml(l.canceledBy) || '—'}</span></td>
                     <td class="px-4 py-3 hidden lg:table-cell"><span class="text-xs text-slate-300">${prevPipe}</span></td>
                     <td class="px-4 py-3">
                         <div class="flex items-center justify-end gap-1">
@@ -5469,7 +5478,7 @@ window.toggleSidebar = function() {
                         ? `<span id="ld-fu-badge" class="text-[11px] px-2.5 py-1 rounded font-bold ml-2 align-middle ${fi.overdue ? 'bg-red-500 text-white' : 'bg-blue-600 text-white'}"><i class="fa-solid fa-clock mr-1"></i>${fi.text}</span><button onclick="openFollowUpPicker(event,'${lead.id}')" class="text-[11px] px-2.5 py-1 rounded font-bold ml-1 align-middle bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white transition-all"><i class="fa-solid fa-clock mr-1"></i>Follow-up</button>`
                         : `<button onclick="openFollowUpPicker(event,'${lead.id}')" class="text-[11px] px-2.5 py-1 rounded font-medium ml-2 align-middle bg-slate-700 hover:bg-blue-600 text-slate-400 hover:text-white transition-all"><i class="fa-solid fa-calendar-plus mr-1"></i>Follow-up</button>`;
                     const nameEl = document.getElementById('ld-name');
-                    if(nameEl) nameEl.innerHTML = `${lead.numId ? '<span class="text-blue-400 text-lg align-middle mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${lead.name}${fuSpan}`;
+                    if(nameEl) nameEl.innerHTML = `${lead.numId ? '<span class="text-blue-400 text-lg align-middle mr-1">'+formatNumId(lead.numId)+'</span>' : ''}${escapeHtml(lead.name)}${fuSpan}`;
                 }
                 showToast('Follow-up agendado: ' + _fuPickerDate.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}), 'success');
                 // Re-renderiza o kanban para reposicionar o card pela urgência do follow-up
