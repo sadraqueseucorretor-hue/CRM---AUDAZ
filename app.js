@@ -1289,6 +1289,7 @@
             setupMasks();
             setupKeyboardShortcuts();
             setupGlobalSearch();
+            setupKanbanDragScroll();
             populateBrokerDropdowns();
             updateNavCounters();
             renderNotifications();
@@ -1795,6 +1796,40 @@ window.toggleSidebar = function() {
                     input.value = '';
                 }
             });
+        }
+
+        // Arrastar com o botão do mouse (fora dos cards) rola o Kanban lateralmente
+        function setupKanbanDragScroll() {
+            const wrapper = document.getElementById('kanban-board-wrapper');
+            if(!wrapper) return;
+            let isDragging = false, startX = 0, startScrollLeft = 0, moved = false;
+
+            wrapper.addEventListener('mousedown', (e) => {
+                if(e.button !== 0) return; // só botão esquerdo
+                if(e.target.closest('.kanban-card, button, select, input, textarea, a')) return;
+                isDragging = true; moved = false;
+                startX = e.clientX;
+                startScrollLeft = wrapper.scrollLeft;
+                wrapper.classList.add('kanban-dragging');
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if(!isDragging) return;
+                const dx = e.clientX - startX;
+                if(Math.abs(dx) > 3) moved = true;
+                wrapper.scrollLeft = startScrollLeft - dx;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if(!isDragging) return;
+                isDragging = false;
+                wrapper.classList.remove('kanban-dragging');
+            });
+
+            // Evita abrir o lead se o mousedown/mouseup terminou em arraste
+            wrapper.addEventListener('click', (e) => {
+                if(moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
+            }, true);
         }
 
         // ====================================================================

@@ -1,5 +1,10 @@
 body { font-family: 'Inter', sans-serif; background-color: #050b14; color: #f8fafc; margin: 0; padding: 0; overflow: hidden; }
 
+/* Kanban: arrastar com o mouse (fora dos cards) rola o board lateralmente */
+#kanban-board-wrapper { cursor: grab; }
+#kanban-board-wrapper.kanban-dragging { cursor: grabbing; user-select: none; }
+#kanban-board-wrapper.kanban-dragging * { user-select: none; }
+
 
         /* Sidebar collapse */
         aside.sidebar-collapsed { width: 64px !important; }
