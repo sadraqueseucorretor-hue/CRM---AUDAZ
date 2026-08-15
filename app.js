@@ -61,12 +61,60 @@
             return snap;
         }
 
-        // Carrega todos os leads (cada um é uma linha)
-        async function loadLeadsFromDB() {
-            const { data, error } = await _sb.from('leads').select('data').limit(20000);
-            if(error) { console.error('Erro ao carregar leads:', error.message); return null; }
-            return data.map(r => r.data);
+        // Cache local dos leads: evita baixar a base inteira a cada login/refresh.
+        // Sincroniza só o que mudou (por updated_at do servidor — evita depender do
+        // relógio do navegador) e refaz a carga completa periodicamente (pega
+        // exclusões, que um sync incremental não enxerga).
+        const LEADS_CACHE_KEY = 'audaz_leads_cache_v1';
+        const LEADS_CACHE_META_KEY = 'audaz_leads_cache_meta_v1';
+        const LEADS_FULL_RESYNC_MS = 12 * 60 * 60 * 1000; // 12h
+        let _leadsCacheMeta = null; // { watermark, fullSyncAt } — usado pelo realtime pra salvar sem recalcular
+
+        function _saveLeadsCache(leads, watermark, fullSyncAt) {
+            _leadsCacheMeta = { watermark, fullSyncAt };
+            try {
+                localStorage.setItem(LEADS_CACHE_KEY, JSON.stringify(leads));
+                localStorage.setItem(LEADS_CACHE_META_KEY, JSON.stringify(_leadsCacheMeta));
+            } catch(_) { /* localStorage cheio — segue sem cache, próxima carga tenta de novo */ }
         }
+
+        // Carrega os leads (cada um é uma linha) usando cache local + sync incremental
+        async function loadLeadsFromDB() {
+            let meta = null, cached = null;
+            try {
+                meta = JSON.parse(localStorage.getItem(LEADS_CACHE_META_KEY) || 'null');
+                cached = JSON.parse(localStorage.getItem(LEADS_CACHE_KEY) || 'null');
+            } catch(_) { meta = null; cached = null; }
+
+            const needsFullSync = !meta || !cached || (Date.now() - new Date(meta.fullSyncAt).getTime()) > LEADS_FULL_RESYNC_MS;
+
+            if(needsFullSync) {
+                const { data, error } = await _sb.from('leads').select('data, updated_at').limit(20000);
+                if(error) { console.error('Erro ao carregar leads:', error.message); return cached; }
+                const leads = data.map(r => r.data);
+                const watermark = data.reduce((max, r) => (r.updated_at > max ? r.updated_at : max), '1970-01-01T00:00:00Z');
+                _saveLeadsCache(leads, watermark, new Date().toISOString());
+                return leads;
+            }
+
+            const { data, error } = await _sb.from('leads').select('data, updated_at').gt('updated_at', meta.watermark).limit(20000);
+            if(error) { console.error('Erro ao sincronizar leads:', error.message); return cached; }
+            if(data.length === 0) { _leadsCacheMeta = meta; return cached; } // nada mudou
+
+            const byId = {};
+            cached.forEach(l => { if(l && l.id) byId[l.id] = l; });
+            data.forEach(r => { if(r.data && r.data.id) byId[r.data.id] = r.data; });
+            const merged = Object.values(byId);
+            const watermark = data.reduce((max, r) => (r.updated_at > max ? r.updated_at : max), meta.watermark);
+            _saveLeadsCache(merged, watermark, meta.fullSyncAt);
+            return merged;
+        }
+        // Salva o cache (debounced) quando o realtime traz mudança de outra sessão
+        // (senão uma exclusão feita em outra sessão pode "ressuscitar" ao reabrir com cache velho)
+        const _debouncedSaveLeadsCache = debounce(() => {
+            if(!_leadsCacheMeta) return; // ainda não carregou nada — não tem cache pra manter
+            _saveLeadsCache(DB.leads, _leadsCacheMeta.watermark, _leadsCacheMeta.fullSyncAt);
+        }, 2000);
         async function loadUsersFromDB() {
             const { data, error } = await _sb.from('users').select('data').limit(20000);
             if(error) { console.error('Erro ao carregar usuários:', error.message); return null; }
@@ -166,6 +214,8 @@
                             _leadsSnapshot[lead.id] = JSON.stringify(lead);
                         }
                     }
+                    // Mantém o cache local em dia (senão exclusão feita em outra sessão "ressuscita" ao usar o cache)
+                    _debouncedSaveLeadsCache();
                     refreshCurrentView();
                 })
                 // Mudanças na tabela de USUÁRIOS
