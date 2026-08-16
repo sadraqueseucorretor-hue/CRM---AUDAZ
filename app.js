@@ -1345,8 +1345,34 @@
             renderNotifications();
             loadProfileForm();
             loadSysLogo();
+            setupBiIframe();
             setupRealtime();
             navigate(startPage);
+        }
+
+        // Monta a URL do BI embutido já com o filtro do usuário logado: Corretor e Gerente
+        // ficam travados no próprio filtro (Corretor/Equipa) dentro do BI — sem conseguir
+        // trocar pra ver outra pessoa/equipe; Diretor e Administrativo abrem sem restrição,
+        // igual sempre foi. (Filtro de conveniência, não é barreira de segurança: o BI em si
+        // não tem login — quem tiver o link consegue abrir direto e ver tudo.)
+        function buildBiIframeUrl() {
+            const base = 'https://sadraqueseucorretor-hue.github.io/audaz-bi/';
+            if(!currentUser) return base;
+            const params = new URLSearchParams();
+            if(currentUser.role === 'Corretor') {
+                params.set('embedRole', 'Corretor');
+                params.set('embedCorretor', currentUser.name);
+            } else if(currentUser.role === 'Gerente' && currentUser.team) {
+                params.set('embedRole', 'Gerente');
+                params.set('embedEquipe', currentUser.team);
+            }
+            const qs = params.toString();
+            return qs ? `${base}?${qs}` : base;
+        }
+
+        function setupBiIframe() {
+            const iframe = document.getElementById('bi-iframe');
+            if(iframe) iframe.src = buildBiIframeUrl();
         }
 
         function setupUIForUser() {

@@ -301,7 +301,8 @@
                             <div class="loader" style="width:32px;height:32px;border-width:4px;"></div>
                             <p class="text-xs text-slate-500 font-semibold">Carregando seu BI...</p>
                         </div>
-                        <iframe id="bi-iframe" src="https://sadraqueseucorretor-hue.github.io/audaz-bi/" class="w-full h-full border-0 block" title="AUDAZ BI" onload="document.getElementById('bi-loader')?.classList.add('opacity-0','pointer-events-none')"></iframe>
+                        <!-- src preenchido via JS (buildBiIframeUrl) depois do login, com o filtro do usuário embutido na URL -->
+                        <iframe id="bi-iframe" class="w-full h-full border-0 block" title="AUDAZ BI" onload="document.getElementById('bi-loader')?.classList.add('opacity-0','pointer-events-none')"></iframe>
                     </div>
                 </div>
 
