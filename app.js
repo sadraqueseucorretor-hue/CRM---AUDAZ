@@ -4615,7 +4615,10 @@ window.toggleSidebar = function() {
             document.getElementById('mv-pct-corretor').value = lead.commissionPctCorretor != null ? lead.commissionPctCorretor : 2;
             document.getElementById('mv-pct-gerente').value = lead.commissionPctGerente != null ? lead.commissionPctGerente : 10;
             document.getElementById('mv-broker').value = lead.broker || '';
-            document.getElementById('mv-sale-date').value = lead.saleDate ? lead.saleDate.split('T')[0] : new Date().toISOString().split('T')[0];
+            // Sempre parte de hoje: esse modal só move o lead PRA financeiro (o botão some
+            // se já está lá), então um saleDate antigo aqui é sempre de um ganho anterior que
+            // foi desfeito — não da venda que está sendo confirmada agora.
+            document.getElementById('mv-sale-date').value = new Date().toISOString().split('T')[0];
             recalcComissao();
 
             currentMoveTarget = null;
