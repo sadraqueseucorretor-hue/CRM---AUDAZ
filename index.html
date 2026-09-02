@@ -867,7 +867,8 @@ function doGet(e) {
                             <div class="loader" style="width:32px;height:32px;border-width:4px;"></div>
                             <p class="text-xs text-slate-500 font-semibold">Carregando sua agenda...</p>
                         </div>
-                        <iframe id="agenda-iframe" src="https://sadraqueseucorretor-hue.github.io/agenda-audaz/" class="w-full h-full border-0 block" title="Agenda Audaz" onload="document.getElementById('agenda-loader')?.classList.add('opacity-0','pointer-events-none')"></iframe>
+                        <!-- src preenchido via JS (setupAgendaIframe) depois do login — antes carregava sempre, até na tela de login -->
+                        <iframe id="agenda-iframe" class="w-full h-full border-0 block" title="Agenda Audaz" onload="document.getElementById('agenda-loader')?.classList.add('opacity-0','pointer-events-none')"></iframe>
                     </div>
                 </div>
 

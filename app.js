@@ -1345,7 +1345,6 @@
             renderNotifications();
             loadProfileForm();
             loadSysLogo();
-            setupBiIframe();
             setupRealtime();
             navigate(startPage);
         }
@@ -1370,9 +1369,27 @@
             return qs ? `${base}?${qs}` : base;
         }
 
+        // Carrega o BI e a Agenda só na 1ª vez que a aba respectiva é aberta — os dois
+        // são páginas pesadas (~170-600KB, com seus próprios CDNs/SDKs) e antes carregavam
+        // sempre junto do CRM (a Agenda inclusive antes do login), pesando o sistema à toa
+        // pra quem nem chega a abrir essas abas na sessão.
+        let _biIframeLoaded = false;
+        let _agendaIframeLoaded = false;
+
         function setupBiIframe() {
+            if(_biIframeLoaded) return;
             const iframe = document.getElementById('bi-iframe');
-            if(iframe) iframe.src = buildBiIframeUrl();
+            if(!iframe) return;
+            iframe.src = buildBiIframeUrl();
+            _biIframeLoaded = true;
+        }
+
+        function setupAgendaIframe() {
+            if(_agendaIframeLoaded) return;
+            const iframe = document.getElementById('agenda-iframe');
+            if(!iframe) return;
+            iframe.src = 'https://sadraqueseucorretor-hue.github.io/agenda-audaz/';
+            _agendaIframeLoaded = true;
         }
 
         function setupUIForUser() {
@@ -1485,9 +1502,10 @@
                 const activeBtn = document.querySelector(`.nav-btn[data-target="${view}"]`);
                 if(activeBtn) { activeBtn.classList.remove('text-slate-400'); activeBtn.classList.add('bg-primary/20', 'text-blue-400'); }
 
-                if (view === 'dashboard') { 
-                    document.getElementById('view-dashboard').classList.remove('hidden'); 
-                    renderDashboard(); 
+                if (view === 'dashboard') {
+                    document.getElementById('view-dashboard').classList.remove('hidden');
+                    setupBiIframe(); // só carrega o BI (pesado) na 1ª vez que a aba é aberta
+                    renderDashboard();
                 } else if (['leads', 'analise', 'financeiro'].includes(view)) {
                     currentPipeline = view; 
                     document.getElementById('view-kanban').classList.remove('hidden');
@@ -1510,6 +1528,7 @@
                     renderUsersTable();
                 } else if(view === 'agenda') {
                     document.getElementById('view-agenda').classList.remove('hidden');
+                    setupAgendaIframe(); // só carrega a Agenda (pesada) na 1ª vez que a aba é aberta
                 } else if(view === 'faturamento') {
                     if(currentUser.role !== 'Diretor') { showToast('Acesso restrito ao Diretor.', 'error'); navigate('dashboard'); return; }
                     document.getElementById('view-faturamento').classList.remove('hidden');
