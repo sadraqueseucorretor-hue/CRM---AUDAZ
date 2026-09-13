@@ -61,6 +61,26 @@
             return snap;
         }
 
+        // Busca TODAS as linhas de uma tabela, paginando em blocos de 1000 — nunca
+        // trunca silenciosamente como um .limit(N) fixo faria se a tabela crescesse
+        // além de N (bug conhecido: antes usava limit(20000) e descartava o resto
+        // sem avisar ninguém se a base um dia passasse disso).
+        async function fetchAllRows(table, columns, applyFilter) {
+            const PAGE_SIZE = 1000;
+            let from = 0;
+            let all = [];
+            while(true) {
+                let query = _sb.from(table).select(columns).range(from, from + PAGE_SIZE - 1);
+                if(applyFilter) query = applyFilter(query);
+                const { data, error } = await query;
+                if(error) return { data: null, error };
+                all = all.concat(data);
+                if(data.length < PAGE_SIZE) break;
+                from += PAGE_SIZE;
+            }
+            return { data: all, error: null };
+        }
+
         // Cache local dos leads: evita baixar a base inteira a cada login/refresh.
         // Sincroniza só o que mudou (por updated_at do servidor — evita depender do
         // relógio do navegador) e refaz a carga completa periodicamente (pega
@@ -89,7 +109,7 @@
             const needsFullSync = !meta || !cached || (Date.now() - new Date(meta.fullSyncAt).getTime()) > LEADS_FULL_RESYNC_MS;
 
             if(needsFullSync) {
-                const { data, error } = await _sb.from('leads').select('data, updated_at').limit(20000);
+                const { data, error } = await fetchAllRows('leads', 'data, updated_at');
                 if(error) { console.error('Erro ao carregar leads:', error.message); return cached; }
                 // Soft-delete: leads marcados como .deleted nunca entram em DB.leads nem no cache
                 const leads = data.map(r => r.data).filter(l => l && !l.deleted);
@@ -98,7 +118,7 @@
                 return leads;
             }
 
-            const { data, error } = await _sb.from('leads').select('data, updated_at').gt('updated_at', meta.watermark).limit(20000);
+            const { data, error } = await fetchAllRows('leads', 'data, updated_at', q => q.gt('updated_at', meta.watermark));
             if(error) { console.error('Erro ao sincronizar leads:', error.message); return cached; }
             if(data.length === 0) { _leadsCacheMeta = meta; return cached; } // nada mudou
 
@@ -121,7 +141,7 @@
             _saveLeadsCache(DB.leads, _leadsCacheMeta.watermark, _leadsCacheMeta.fullSyncAt);
         }, 2000);
         async function loadUsersFromDB() {
-            const { data, error } = await _sb.from('users').select('data').limit(20000);
+            const { data, error } = await fetchAllRows('users', 'data');
             if(error) { console.error('Erro ao carregar usuários:', error.message); return null; }
             return data.map(r => r.data);
         }
