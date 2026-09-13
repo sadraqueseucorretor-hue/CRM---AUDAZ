@@ -39,20 +39,29 @@
 --    agora, usando o MESMO critério que o app já usa no navegador (achar o
 --    usuário pela tabela `users` comparando e-mail) — só que aqui é o e-mail
 --    do próprio token (JWT) de login, não pode ser forjado pelo cliente.
+--
+--    Nome com prefixo "crm_blob_" DE PROPÓSITO: o projeto já tem funções
+--    current_user_role()/current_user_name()/current_user_team() usadas por
+--    políticas em outras tabelas (profiles/lead_messages/lead_files — uma
+--    estrutura paralela que o app não usa). Sobrescrever essas funções
+--    mudaria o comportamento daquelas políticas sem querer — por isso nomes
+--    totalmente distintos aqui, só pras tabelas que o app realmente usa.
 -- ----------------------------------------------------------------------------
 
-create or replace function current_user_email()
+create or replace function crm_blob_user_email()
 returns text
 language sql
 stable
+set search_path = public
 as $$
   select auth.jwt() ->> 'email';
 $$;
 
-create or replace function current_user_role()
+create or replace function crm_blob_user_role()
 returns text
 language sql
 stable
+set search_path = public
 as $$
   select data ->> 'role'
   from users
@@ -74,9 +83,9 @@ on users
 as restrictive
 for insert
 with check (
-  current_user_role() = 'Diretor'
+  crm_blob_user_role() = 'Diretor'
   or (
-    current_user_role() in ('Administrativo', 'Gerente')
+    crm_blob_user_role() in ('Administrativo', 'Gerente')
     and data ->> 'role' = 'Corretor'
   )
 );
@@ -88,14 +97,14 @@ as restrictive
 for update
 using (true)
 with check (
-  current_user_role() = 'Diretor'
+  crm_blob_user_role() = 'Diretor'
   or (
-    current_user_role() in ('Administrativo', 'Gerente')
+    crm_blob_user_role() in ('Administrativo', 'Gerente')
     and data ->> 'role' = 'Corretor'
   )
   or (
-    data ->> 'email' = current_user_email()
-    and data ->> 'role' = current_user_role()
+    data ->> 'email' = crm_blob_user_email()
+    and data ->> 'role' = crm_blob_user_role()
   )
 );
 
@@ -115,9 +124,9 @@ on users
 as restrictive
 for delete
 using (
-  current_user_role() = 'Diretor'
+  crm_blob_user_role() = 'Diretor'
   or (
-    current_user_role() in ('Administrativo', 'Gerente')
+    crm_blob_user_role() in ('Administrativo', 'Gerente')
     and data ->> 'role' = 'Corretor'
   )
 );
@@ -127,14 +136,14 @@ create policy leads_delete_diretor_only
 on leads
 as restrictive
 for delete
-using (current_user_role() = 'Diretor');
+using (crm_blob_user_role() = 'Diretor');
 
 drop policy if exists crm_storage_delete_diretor_only on crm_storage;
 create policy crm_storage_delete_diretor_only
 on crm_storage
 as restrictive
 for delete
-using (current_user_role() = 'Diretor');
+using (crm_blob_user_role() = 'Diretor');
 
 
 -- ----------------------------------------------------------------------------
@@ -151,7 +160,7 @@ for update
 using (true)
 with check (
   key not in ('audaz_pipelines', 'audaz_listas', 'audaz_config')
-  or current_user_role() = 'Diretor'
+  or crm_blob_user_role() = 'Diretor'
 );
 
 
@@ -189,6 +198,6 @@ with check (
 -- drop policy if exists leads_delete_diretor_only on leads;
 -- drop policy if exists crm_storage_delete_diretor_only on crm_storage;
 -- drop policy if exists crm_storage_update_config_guard on crm_storage;
--- drop function if exists current_user_role();
--- drop function if exists current_user_email();
+-- drop function if exists crm_blob_user_role();
+-- drop function if exists crm_blob_user_email();
 -- ============================================================================

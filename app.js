@@ -91,7 +91,8 @@
             if(needsFullSync) {
                 const { data, error } = await _sb.from('leads').select('data, updated_at').limit(20000);
                 if(error) { console.error('Erro ao carregar leads:', error.message); return cached; }
-                const leads = data.map(r => r.data);
+                // Soft-delete: leads marcados como .deleted nunca entram em DB.leads nem no cache
+                const leads = data.map(r => r.data).filter(l => l && !l.deleted);
                 const watermark = data.reduce((max, r) => (r.updated_at > max ? r.updated_at : max), '1970-01-01T00:00:00Z');
                 _saveLeadsCache(leads, watermark, new Date().toISOString());
                 return leads;
@@ -102,8 +103,12 @@
             if(data.length === 0) { _leadsCacheMeta = meta; return cached; } // nada mudou
 
             const byId = {};
-            cached.forEach(l => { if(l && l.id) byId[l.id] = l; });
-            data.forEach(r => { if(r.data && r.data.id) byId[r.data.id] = r.data; });
+            (cached || []).forEach(l => { if(l && l.id) byId[l.id] = l; });
+            data.forEach(r => {
+                if(!r.data || !r.data.id) return;
+                if(r.data.deleted) delete byId[r.data.id]; // soft-deletado em outra sessão — some do cache local
+                else byId[r.data.id] = r.data;
+            });
             const merged = Object.values(byId);
             const watermark = data.reduce((max, r) => (r.updated_at > max ? r.updated_at : max), meta.watermark);
             _saveLeadsCache(merged, watermark, meta.fullSyncAt);
@@ -207,11 +212,17 @@
                     } else {
                         const lead = payload.new?.data;
                         if(lead && lead.id) {
-                            const idx = DB.leads.findIndex(l => l.id === lead.id);
-                            if(idx !== -1) DB.leads[idx] = lead;
-                            else DB.leads.push(lead);
-                            // Atualiza snapshot para não re-salvar essa mudança vinda de fora
-                            _leadsSnapshot[lead.id] = JSON.stringify(lead);
+                            if(lead.deleted) {
+                                // Soft-delete feito em outra sessão — some daqui igual um DELETE físico
+                                DB.leads = DB.leads.filter(l => l.id !== lead.id);
+                                delete _leadsSnapshot[lead.id];
+                            } else {
+                                const idx = DB.leads.findIndex(l => l.id === lead.id);
+                                if(idx !== -1) DB.leads[idx] = lead;
+                                else DB.leads.push(lead);
+                                // Atualiza snapshot para não re-salvar essa mudança vinda de fora
+                                _leadsSnapshot[lead.id] = JSON.stringify(lead);
+                            }
                         }
                     }
                     // Mantém o cache local em dia (senão exclusão feita em outra sessão "ressuscita" ao usar o cache)
@@ -3630,14 +3641,28 @@ window.toggleSidebar = function() {
             showToast('Documento excluído.', 'info');
         }
 
-        window.deleteLead = function() {
+        window.deleteLead = async function() {
             const id = document.getElementById('ld-id').value;
             const lead = DB.leads.find(l => l.id === id);
             if(!lead) return;
             if(!confirm(`Excluir o lead "${lead.name}" permanentemente?`)) return;
-            
+
+            // Soft-delete: marca em vez de sumir do array antes de salvar. Um DELETE
+            // físico não aparece no sync incremental por updated_at de outras sessões
+            // (só é pego no resync completo de 12h) — o lead podia "ressuscitar" até
+            // lá. Marcando e salvando, o UPSERT propaga a exclusão pelo mesmo caminho
+            // que qualquer outra mudança.
+            lead.deleted = true;
+            lead.deletedAt = new Date().toISOString();
+            lead.updatedAt = lead.deletedAt;
+            lead.updatedBy = currentUser.name;
+            await saveLeadsDB();
+
+            // Só agora sai da memória local + do snapshot (senão o próximo save
+            // interpretaria o sumiço como "precisa excluir fisicamente")
             DB.leads = DB.leads.filter(l => l.id !== id);
-            saveLeadsDB();
+            delete _leadsSnapshot[id];
+
             closeModal('modal-lead-details');
             showToast('Lead excluído.', 'info');
             addNotification(`Lead "${lead.name}" foi excluído`, 'warning');
@@ -5255,166 +5280,27 @@ window.toggleSidebar = function() {
         }
 
         // Exclusão permanente de lead cancelado — somente Diretor
-        window.excluirCanceladoPermanente = function(id, nome) {
+        window.excluirCanceladoPermanente = async function(id, nome) {
             if(currentUser.role !== 'Diretor') { showToast('Apenas o Diretor pode excluir permanentemente.', 'error'); return; }
             if(!confirm(`Excluir permanentemente "${nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
+            const lead = DB.leads.find(l => l.id === id);
+            if(!lead) return;
+
+            // Soft-delete (mesmo motivo do deleteLead): DELETE físico não aparece no
+            // sync incremental de outras sessões, o lead podia "ressuscitar".
+            lead.deleted = true;
+            lead.deletedAt = new Date().toISOString();
+            lead.updatedAt = lead.deletedAt;
+            lead.updatedBy = currentUser.name;
+            await saveLeadsDB();
+
             DB.leads = DB.leads.filter(l => l.id !== id);
-            saveLeadsDB();
+            delete _leadsSnapshot[id];
+
             showToast(`Lead "${nome}" excluído permanentemente.`, 'success');
             renderCancelados();
         }
 
-        // ====================================================================
-        // BASE DE TESTES — 20 LEADS + 5 CORRETORES
-        // ====================================================================
-        window.loadTestBase = function() {
-            if(!confirm('Carregar a base de testes?\n\nIsso vai adicionar:\n• 10 corretores\n• 2 gerentes\n• 20 leads de exemplo\n\nLeads e usuários existentes NÃO serão removidos. Deseja continuar?')) return;
-
-            // 2 GERENTES (cada um responsável por uma equipe)
-            const TEST_MANAGERS = [
-                { name: 'Leonilson Silva', email: 'leonilson@audaz.com', team: 'Blacks', role: 'Gerente' },
-                { name: 'Samara Rodrigues', email: 'samara@audaz.com', team: 'Diamond', role: 'Gerente' }
-            ];
-
-            // 10 CORRETORES distribuídos nas 3 equipes
-            const TEST_BROKERS = [
-                { name: 'Thaís Abreu', email: 'thais.abreu@audaz.com', team: 'Blacks' },
-                { name: 'Silnara Silva', email: 'silnara.silva@audaz.com', team: 'Diamond' },
-                { name: 'Leonilson Silva', email: 'leonilson.silva@audaz.com', team: 'Blacks' },
-                { name: 'Janiele Ellen', email: 'janiele.ellen@audaz.com', team: 'Platinum' },
-                { name: 'Eduardo Prudêncio', email: 'eduardo.prudencio@audaz.com', team: 'Diamond' },
-                { name: 'Rui Castro', email: 'rui.castro@audaz.com', team: 'Blacks' },
-                { name: 'Samara Rodrigues Corretora', email: 'samara.corretora@audaz.com', team: 'Diamond' },
-                { name: 'Linda Inez', email: 'linda.inez@audaz.com', team: 'Platinum' },
-                { name: 'Pablo Jihad', email: 'pablo.jihad@audaz.com', team: 'Platinum' },
-                { name: 'Ana Larissa', email: 'ana.larissa@audaz.com', team: 'Blacks' }
-            ];
-
-            let addedUsers = 0;
-
-            // Cadastrar gerentes
-            TEST_MANAGERS.forEach(m => {
-                const exists = DB.users.find(u => u.email === m.email);
-                if(!exists) {
-                    DB.users.push({
-                        id: 'u_' + generateId(),
-                        email: m.email, pass: '123456',
-                        name: m.name, role: 'Gerente', status: 'Ativo',
-                        phone: '', team: m.team, goal: 250000, commission: 1.5,
-                        photo: null, lastAccess: null,
-                        createdAt: getDateStr(), createdBy: currentUser.id
-                    });
-                    addedUsers++;
-                }
-            });
-
-            // Cadastrar/atualizar os corretores
-            TEST_BROKERS.forEach(b => {
-                const exists = DB.users.find(u => u.email === b.email);
-                if(!exists) {
-                    DB.users.push({
-                        id: 'u_' + generateId(),
-                        email: b.email, pass: '123456',
-                        name: b.name, role: 'Corretor', status: 'Ativo',
-                        phone: '', team: b.team, goal: 80000, commission: 3,
-                        photo: null, lastAccess: null,
-                        createdAt: getDateStr(), createdBy: currentUser.id
-                    });
-                    addedUsers++;
-                }
-            });
-
-            // 20 LEADS distribuídos: 2 por corretor (10 corretores × 2 = 20)
-            const TEST_LEADS_TEMPLATES = [
-                // Thaís Abreu (Blacks)
-                { name: 'João Henrique Costa', phone: '(11) 98700-1001', origin: 'Instagram', pipeline: 'leads', stageId: 'hot', temp: 'Hot', city: 'São Paulo' },
-                { name: 'Beatriz Soares', phone: '(11) 98700-1002', origin: 'Facebook', pipeline: 'leads', stageId: 'visita', temp: 'Hot', city: 'Osasco' },
-                // Silnara Silva (Diamond)
-                { name: 'Carlos Eduardo Mendes', phone: '(11) 98700-2001', origin: 'Site', pipeline: 'leads', stageId: 'aguardando', temp: 'Novo', city: 'São Paulo' },
-                { name: 'Roberto Vieira', phone: '(11) 98700-2002', origin: 'Instagram', pipeline: 'analise', stageId: 'aprovado', temp: 'Hot', city: 'Santo André' },
-                // Leonilson Silva Corretor (Blacks)
-                { name: 'Fernanda Ribeiro', phone: '(11) 98700-3001', origin: 'Indicação', pipeline: 'leads', stageId: 'tratativa', temp: 'Morno', city: 'São Paulo' },
-                { name: 'Cristiane Barros', phone: '(11) 98700-3002', origin: 'Instagram', pipeline: 'financeiro', stageId: 'venda-gerada', temp: 'Hot', city: 'São Paulo', vgv: 380000, commissionValue: 11400 },
-                // Janiele Ellen (Platinum)
-                { name: 'Vanessa Cardoso', phone: '(11) 98700-4001', origin: 'WhatsApp', pipeline: 'leads', stageId: 'visita', temp: 'Hot', city: 'Embu' },
-                { name: 'Larissa Moreira', phone: '(11) 98700-4002', origin: 'Indicação', pipeline: 'financeiro', stageId: 'assinatura', temp: 'Hot', city: 'Cotia', vgv: 420000, commissionValue: 12600 },
-                // Eduardo Prudêncio (Diamond)
-                { name: 'Camila Duarte', phone: '(11) 98700-5001', origin: 'Site', pipeline: 'leads', stageId: 'doc-recebida', temp: 'Hot', city: 'São Paulo' },
-                { name: 'Aline Cavalcante', phone: '(11) 98700-5002', origin: 'Google', pipeline: 'financeiro', stageId: 'entrada-pendente', temp: 'Hot', city: 'Barueri', vgv: 510000, commissionValue: 15300 },
-                // Rui Castro (Blacks)
-                { name: 'Anderson Lima', phone: '(11) 98700-6001', origin: 'Facebook', pipeline: 'analise', stageId: 'com-pendencia', temp: 'Morno', city: 'Mauá' },
-                { name: 'Diego Martins', phone: '(11) 98700-6002', origin: 'Site', pipeline: 'leads', stageId: 'compareceu', temp: 'Hot', city: 'Taboão da Serra' },
-                // Samara Corretora (Diamond)
-                { name: 'Patrícia Nunes', phone: '(11) 98700-7001', origin: 'WhatsApp', pipeline: 'leads', stageId: 'hot', temp: 'Hot', city: 'Diadema' },
-                { name: 'Juliana Pacheco', phone: '(11) 98700-7002', origin: 'Google', pipeline: 'leads', stageId: 'doc-recebida', temp: 'Hot', city: 'São Bernardo' },
-                // Linda Inez (Platinum)
-                { name: 'Bruno Carvalho', phone: '(11) 98700-8001', origin: 'Instagram', pipeline: 'leads', stageId: 'hot', temp: 'Hot', city: 'Itapevi' },
-                { name: 'Felipe Andrade', phone: '(11) 98700-8002', origin: 'Google', pipeline: 'analise', stageId: 'aprovado', temp: 'Hot', city: 'São Paulo' },
-                // Pablo Jihad (Platinum)
-                { name: 'Mariana Lopes', phone: '(11) 98700-9001', origin: 'Google', pipeline: 'leads', stageId: 'tratativa', temp: 'Morno', city: 'Guarulhos' },
-                { name: 'Thiago Macedo', phone: '(11) 98700-9002', origin: 'Facebook', pipeline: 'analise', stageId: 'em-analise', temp: 'Morno', city: 'Carapicuíba' },
-                // Ana Larissa (Blacks)
-                { name: 'Ricardo Almeida', phone: '(11) 98700-1003', origin: 'Indicação', pipeline: 'analise', stageId: 'em-analise', temp: 'Hot', city: 'São Paulo' },
-                { name: 'Marcelo Tavares', phone: '(11) 98700-1004', origin: 'WhatsApp', pipeline: 'leads', stageId: 'tratativa', temp: 'Morno', city: 'Jandira' }
-            ];
-
-            const now = new Date().toISOString();
-            const today = getDateStr();
-            const t = getTime();
-            let addedLeads = 0;
-            
-            TEST_LEADS_TEMPLATES.forEach((tpl, idx) => {
-                // 2 leads por corretor: idx 0,1 → broker 0; idx 2,3 → broker 1; ...
-                const brokerIdx = Math.floor(idx / 2);
-                const broker = TEST_BROKERS[brokerIdx];
-                if(!broker) return;
-                
-                // Evita duplicar leads de teste
-                if(DB.leads.find(l => l.phone === tpl.phone)) return;
-
-                const lead = {
-                    id: generateId(),
-                    numId: nextNumId(),
-                    name: tpl.name, phone: tpl.phone,
-                    email: tpl.name.toLowerCase().replace(/\s+/g, '.').normalize('NFD').replace(/[\u0300-\u036f]/g, '') + '@email.com',
-                    origin: tpl.origin, city: tpl.city,
-                    broker: broker.name,
-                    pipeline: tpl.pipeline, stageId: tpl.stageId, order: 0,
-                    temp: tpl.temp,
-                    tags: [], docs: ['rg','cpf'], files: [],
-                    timeline: [
-                        `[${t}] Lead criado automaticamente (base de testes)`,
-                        `[${t}] Atribuído a ${broker.name} (${broker.team})`
-                    ],
-                    messages: [{
-                        id: generateId(),
-                        text: `Lead da base de testes — equipe ${broker.team}. Cliente interessado em imóveis na região de ${tpl.city}.`,
-                        author: broker.name, authorId: 'system-test', role: 'Corretor',
-                        timestamp: now
-                    }],
-                    date: today, createdAt: now, updatedAt: now, updatedBy: broker.name,
-                    vgv: tpl.vgv || 0,
-                    propertyValue: tpl.vgv || 0,
-                    commissionValue: tpl.commissionValue || 0,
-                    saleDate: tpl.pipeline === 'financeiro' ? today : null
-                };
-                DB.leads.push(lead);
-                addedLeads++;
-            });
-
-            saveUsersDB();
-            saveLeadsDB();
-            populateBrokerDropdowns();
-            updateNavCounters();
-
-            const msg = `Base de testes carregada! ${addedUsers} usuários (incluindo 2 gerentes) e ${addedLeads} leads adicionados.`;
-            showToast(msg, 'success');
-            addNotification(msg, 'success');
-
-            if(['leads','analise','financeiro','cancelados'].includes(currentView)) renderKanban(currentPipeline);
-            if(currentView === 'dashboard') renderDashboard();
-            if(currentView === 'users') renderUsersTable();
-        }
 
         window.updateTeamDisplay = function() {
             const brokerName = document.getElementById('ld-broker')?.value;
