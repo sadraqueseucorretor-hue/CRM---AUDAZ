@@ -1643,7 +1643,7 @@ window.toggleSidebar = function() {
             list.classList.remove('hidden');
             empty.classList.add('hidden');
             list.innerHTML = leads.map(lead => {
-                const brokers = DB.users.filter(u => u.role === 'Corretor').map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+                const brokers = DB.users.filter(u => (u.role === 'Corretor' || u.role === 'Gerente') && u.status === 'Ativo').map(u => `<option value="${escapeHtml(u.name)}">${escapeHtml(u.name)}</option>`).join('');
                 return `
                 <div class="glass border border-amber-500/20 rounded-xl p-5 flex flex-col gap-3 hover:border-amber-400/40 transition-colors">
                     <div class="flex items-start justify-between">
