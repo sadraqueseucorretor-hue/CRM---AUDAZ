@@ -1657,11 +1657,14 @@ window.toggleSidebar = function() {
                     <div class="border-t border-slate-700/50 pt-3">
                         <label class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1 block">Distribuir para:</label>
                         <div class="flex gap-2">
-                            <select id="dist-broker-${lead.id}" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
-                                <option value="">Selecione o corretor</option>
-                                ${brokers}
-                            </select>
-                            <button onclick="distribuirLead('${lead.id}')" class="bg-amber-500 hover:bg-amber-400 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1">
+                            <div class="flex-1 min-w-0 relative">
+                                <select id="dist-broker-${lead.id}" class="w-full appearance-none bg-slate-800 border border-slate-600 rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
+                                    <option value="">Selecione o corretor</option>
+                                    ${brokers}
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
+                            </div>
+                            <button onclick="distribuirLead('${lead.id}')" class="bg-amber-500 hover:bg-amber-400 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1 flex-shrink-0">
                                 <i class="fa-solid fa-paper-plane"></i>
                             </button>
                         </div>
